@@ -1,0 +1,1004 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Turnos AGC — Asociados García Castro</title>
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  --agc-azul: #0C0D4D;
+  --agc-blanco: #FFFFFF;
+  --agc-gris-medio: #7E7E7E;
+  --agc-gris-claro: #E1E1E1;
+  --agc-dorado: #C9A84C;
+  --font: 'Manrope', 'Montserrat', sans-serif;
+  --radius: 10px;
+  --shadow: 0 2px 12px rgba(12,13,77,0.10);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font);background:#f4f5f9;min-height:100vh;color:#1a1a2e}
+
+/* ── LOGIN ── */
+#screen-login{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;padding:2rem}
+.login-card{background:var(--agc-blanco);border-radius:16px;box-shadow:var(--shadow);padding:2.5rem 2rem;width:100%;max-width:380px}
+.login-logo{background:var(--agc-azul);border-radius:12px;padding:1.25rem 1.5rem;text-align:center;margin-bottom:1.5rem}
+.login-logo-text{color:var(--agc-blanco);font-size:11px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;opacity:0.7;display:block;margin-bottom:3px}
+.login-logo-name{color:var(--agc-blanco);font-size:20px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase}
+.login-logo-gc{color:var(--agc-dorado);font-size:32px;font-weight:700;display:block;margin-top:4px}
+.login-title{font-size:16px;font-weight:700;color:var(--agc-azul);margin-bottom:4px}
+.login-sub{font-size:13px;color:var(--agc-gris-medio);margin-bottom:1.5rem}
+.login-card label{font-size:12px;font-weight:500;color:var(--agc-azul);display:block;margin-bottom:5px;margin-top:12px}
+.login-card label:first-of-type{margin-top:0}
+.login-card input{width:100%;padding:10px 12px;border:1.5px solid var(--agc-gris-claro);border-radius:8px;font-family:var(--font);font-size:13px;color:#1a1a2e;background:#fff;outline:none;transition:border-color 0.2s}
+.login-card input:focus{border-color:var(--agc-azul)}
+.btn-login{width:100%;margin-top:1.25rem;padding:12px;background:var(--agc-azul);color:var(--agc-blanco);border:none;border-radius:8px;font-family:var(--font);font-size:14px;font-weight:700;cursor:pointer;letter-spacing:0.03em;transition:opacity 0.2s}
+.btn-login:hover{opacity:0.88}
+.login-error{font-size:12px;color:#c0392b;margin-top:8px;display:none;text-align:center}
+.login-version{font-size:11px;color:var(--agc-gris-medio);text-align:center;margin-top:1.25rem}
+
+/* ── TOPBAR ── */
+#screen-app{display:none;flex-direction:column;min-height:100vh}
+.topbar{background:var(--agc-azul);padding:0 1.25rem;display:flex;align-items:center;justify-content:space-between;height:54px;flex-shrink:0}
+.topbar-brand{display:flex;align-items:center;gap:10px}
+.topbar-gc{background:var(--agc-dorado);color:var(--agc-azul);font-size:13px;font-weight:700;width:30px;height:30px;border-radius:6px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.topbar-name{color:var(--agc-blanco);font-size:13px;font-weight:700;letter-spacing:0.03em}
+.topbar-sub{color:rgba(255,255,255,0.55);font-size:11px}
+.topbar-right{display:flex;align-items:center;gap:10px}
+.topbar-user{color:rgba(255,255,255,0.75);font-size:12px;text-align:right}
+.btn-logout{background:rgba(255,255,255,0.12);color:var(--agc-blanco);border:none;border-radius:6px;padding:5px 10px;font-family:var(--font);font-size:11px;cursor:pointer}
+.btn-logout:hover{background:rgba(255,255,255,0.2)}
+
+/* ── NAV TABS ── */
+.navtabs{background:var(--agc-blanco);border-bottom:1.5px solid var(--agc-gris-claro);display:flex;padding:0 1.25rem;gap:2px;overflow-x:auto}
+.navtab{padding:10px 14px;font-size:12px;font-weight:500;color:var(--agc-gris-medio);border:none;background:none;cursor:pointer;font-family:var(--font);border-bottom:2.5px solid transparent;margin-bottom:-1.5px;white-space:nowrap;display:flex;align-items:center;gap:5px}
+.navtab.active{color:var(--agc-azul);border-bottom-color:var(--agc-azul);font-weight:700}
+
+/* ── CONTENT ── */
+.content{flex:1;padding:1.25rem;overflow-y:auto}
+.view{display:none}.view.active{display:block}
+
+/* ── CARDS ── */
+.card{background:var(--agc-blanco);border-radius:var(--radius);box-shadow:var(--shadow);padding:1.25rem;margin-bottom:1rem}
+.card-title{font-size:13px;font-weight:700;color:var(--agc-azul);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:1rem;display:flex;align-items:center;gap:6px}
+.card-title::before{content:'';width:3px;height:14px;background:var(--agc-dorado);border-radius:2px;display:inline-block}
+
+/* ── METRICS ── */
+.metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-bottom:1rem}
+.metric{background:var(--agc-blanco);border-radius:var(--radius);box-shadow:var(--shadow);padding:1rem;text-align:center}
+.metric-num{font-size:26px;font-weight:700;color:var(--agc-azul)}
+.metric-num.verde{color:#0a7c5c}
+.metric-num.rojo{color:#c0392b}
+.metric-num.amarillo{color:#b7820a}
+.metric-lbl{font-size:11px;color:var(--agc-gris-medio);margin-top:3px}
+
+/* ── PILLS ── */
+.pill{display:inline-block;font-size:10px;font-weight:500;padding:2px 8px;border-radius:10px;white-space:nowrap}
+.pill-ok{background:#e1f5ee;color:#0a7c5c}
+.pill-late{background:#fef3cd;color:#856404}
+.pill-miss{background:#fce8e8;color:#c0392b}
+.pill-pend{background:#fff3cd;color:#856404}
+.pill-appr{background:#e1f5ee;color:#0a7c5c}
+.pill-rej{background:#fce8e8;color:#c0392b}
+.pill-auto{background:#e8eeff;color:#0C0D4D}
+.pill-face{background:#e8eeff;color:#0C0D4D}
+
+/* ── STORE ROWS ── */
+.store-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--agc-gris-claro)}
+.store-row:last-child{border-bottom:none}
+.store-dot{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.dot-verde{background:#1D9E75}.dot-rojo{background:#c0392b}.dot-amarillo{background:#f39c12}
+.store-info{flex:1}
+.store-name{font-size:13px;font-weight:500;color:#1a1a2e}
+.store-city{font-size:11px;color:var(--agc-gris-medio)}
+.store-time{font-size:11px;color:var(--agc-gris-medio);min-width:90px;text-align:right}
+
+/* ── KIOSK ── */
+.kiosk-wrap{display:grid;grid-template-columns:200px 1fr;gap:1rem;min-height:480px}
+.kiosk-l{background:var(--agc-azul);border-radius:var(--radius);padding:1.25rem;display:flex;flex-direction:column;align-items:center;gap:12px}
+.kiosk-store{color:var(--agc-blanco);font-size:13px;font-weight:700;text-align:center;text-transform:uppercase;letter-spacing:0.05em}
+.kiosk-clock{color:var(--agc-blanco);font-size:26px;font-weight:700;text-align:center}
+.kiosk-date{color:rgba(255,255,255,0.6);font-size:11px;text-align:center}
+.kiosk-gc{background:var(--agc-dorado);color:var(--agc-azul);font-size:22px;font-weight:700;width:52px;height:52px;border-radius:10px;display:flex;align-items:center;justify-content:center}
+.cam-box{background:#111;border-radius:10px;width:160px;height:150px;display:flex;align-items:center;justify-content:center}
+.face-ring{width:90px;height:110px;border:2px dashed rgba(255,255,255,0.3);border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px}
+.face-ring.scanning{border-color:var(--agc-dorado);animation:pulse 1s infinite}
+.face-ring.ok{border-color:#1D9E75;border-style:solid}
+.face-ring.fail{border-color:#c0392b;border-style:solid}
+.face-lbl{color:rgba(255,255,255,0.5);font-size:10px;text-align:center;padding:0 6px}
+.face-lbl.g{color:#5DCAA5}.face-lbl.r{color:#F09595}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:0.3}}
+.gps-bar{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,0.1);border-radius:6px;padding:5px 8px;width:160px}
+.gps-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
+.gps-dot.on{background:#1D9E75}.gps-dot.spin{background:var(--agc-dorado);animation:pulse 1s infinite}
+.gps-txt{color:rgba(255,255,255,0.65);font-size:10px}
+
+.kiosk-r{display:flex;flex-direction:column;justify-content:center}
+.kiosk-sec{font-size:11px;font-weight:700;color:var(--agc-azul);text-transform:uppercase;letter-spacing:0.07em;margin-bottom:8px}
+.emp-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:1rem}
+.emp-btn{background:var(--agc-blanco);border:1.5px solid var(--agc-gris-claro);border-radius:8px;padding:9px 10px;cursor:pointer;text-align:left;font-family:var(--font)}
+.emp-btn:hover{border-color:var(--agc-azul)}
+.emp-btn.sel{border:2px solid var(--agc-azul);background:#f0f1ff}
+.emp-btn-name{font-size:12px;font-weight:700;color:#1a1a2e}
+.emp-btn-role{font-size:10px;color:var(--agc-gris-medio);margin-top:1px}
+.reg-btns{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin-bottom:1rem}
+.rb{padding:8px 4px;font-size:11px;border-radius:8px;cursor:pointer;border:1.5px solid var(--agc-gris-claro);background:var(--agc-blanco);color:var(--agc-gris-medio);font-family:var(--font);text-align:center;line-height:1.3}
+.rb.sel{background:#f0f1ff;color:var(--agc-azul);border-color:var(--agc-azul);font-weight:700}
+.turno-badge{font-size:11px;padding:6px 10px;border-radius:6px;background:#e8eeff;color:var(--agc-azul);margin-bottom:10px;display:none;font-weight:500}
+.alert-kiosk{font-size:12px;padding:8px 10px;border-radius:8px;margin-bottom:10px;line-height:1.5;display:none}
+.alert-warn{background:#fff3cd;color:#856404}
+.alert-err{background:#fce8e8;color:#c0392b}
+.alert-ok-box{background:#e1f5ee;color:#0a7c5c}
+.btn-verificar{width:100%;padding:11px;background:var(--agc-azul);color:var(--agc-blanco);border:none;border-radius:8px;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;margin-bottom:6px}
+.btn-verificar:disabled{background:var(--agc-gris-claro);color:var(--agc-gris-medio);cursor:not-allowed}
+.btn-sec{width:100%;padding:9px;background:var(--agc-blanco);color:var(--agc-azul);border:1.5px solid var(--agc-gris-claro);border-radius:8px;font-family:var(--font);font-size:12px;font-weight:500;cursor:pointer}
+.result-box{border-radius:10px;padding:1.25rem;text-align:center;margin-bottom:10px}
+.result-box.ok{background:#e1f5ee}.result-box.err{background:#fce8e8}.result-box.warn{background:#fff3cd}
+.result-icon{font-size:28px;margin-bottom:6px}
+.result-title{font-size:14px;font-weight:700;margin-bottom:3px}
+.result-box.ok .result-title{color:#0a7c5c}
+.result-box.err .result-title{color:#c0392b}
+.result-box.warn .result-title{color:#856404}
+.result-detail{font-size:11px;color:var(--agc-gris-medio)}
+
+/* ── FORMS ── */
+.form-group{margin-bottom:10px}
+.form-group label{font-size:12px;font-weight:500;color:var(--agc-azul);display:block;margin-bottom:4px}
+.form-group select,.form-group input{width:100%;padding:8px 10px;border:1.5px solid var(--agc-gris-claro);border-radius:8px;font-family:var(--font);font-size:13px;color:#1a1a2e;background:#fff;outline:none}
+.form-group select:focus,.form-group input:focus{border-color:var(--agc-azul)}
+.btn-primary{padding:10px 20px;background:var(--agc-azul);color:var(--agc-blanco);border:none;border-radius:8px;font-family:var(--font);font-size:13px;font-weight:700;cursor:pointer;width:100%;margin-top:4px}
+.btn-primary:hover{opacity:0.88}
+
+/* ── MALLA ── */
+.day-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px;margin:8px 0}
+.day-cell{font-size:10px;text-align:center;padding:5px 2px;border-radius:6px;border:1.5px solid var(--agc-gris-claro);cursor:pointer;font-family:var(--font);font-weight:500;color:var(--agc-gris-medio);background:#fff}
+.day-cell.work{background:#e1f5ee;color:#0a7c5c;border-color:#9FE1CB}
+.day-cell.rest{background:#fff3cd;color:#856404;border-color:#FAC775}
+.hours-bar{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-radius:8px;font-size:12px;font-weight:500;margin:8px 0}
+.hours-ok{background:#e1f5ee;color:#0a7c5c}
+.hours-warn{background:#fff3cd;color:#856404}
+.hours-err{background:#fce8e8;color:#c0392b}
+
+/* ── APPROVAL CARDS ── */
+.appr-card{border:1px solid var(--agc-gris-claro);border-radius:10px;padding:10px 12px;margin-bottom:8px}
+.appr-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:6px}
+.appr-name{font-size:13px;font-weight:700;color:#1a1a2e}
+.appr-detail{font-size:11px;color:var(--agc-gris-medio);margin-top:2px;line-height:1.5}
+.appr-btns{display:flex;gap:5px}
+.bsm{padding:5px 10px;font-size:11px;font-weight:700;border-radius:6px;cursor:pointer;border:none;font-family:var(--font)}
+.bsm-ok{background:#1D9E75;color:#fff}.bsm-no{background:#c0392b;color:#fff}
+
+/* ── REPORTE ── */
+.rep-table{width:100%;border-collapse:collapse;font-size:11px;table-layout:fixed}
+.rep-table th{font-size:10px;font-weight:700;color:var(--agc-gris-medio);text-align:left;padding:6px 8px;border-bottom:1.5px solid var(--agc-gris-claro);background:#f4f5f9;text-transform:uppercase;letter-spacing:0.05em}
+.rep-table td{padding:7px 8px;border-bottom:1px solid var(--agc-gris-claro);color:#1a1a2e;vertical-align:middle}
+.rep-table tr:hover td{background:#f9f9ff}
+.tc{text-align:center}
+.num-ot{color:#c0392b;font-weight:700}
+.num-dom{color:#534AB7;font-weight:700}
+.num-rec{color:#856404;font-weight:700}
+.num-aus{color:#0C0D4D;font-weight:700}
+.num-fal{color:#c0392b;font-weight:700}
+.num-ok{color:#0a7c5c;font-weight:700}
+
+/* ── AUSENCIAS ── */
+.aus-tipo-info{font-size:12px;padding:8px 10px;border-radius:8px;margin-top:6px;line-height:1.5;display:none}
+
+/* ── LOADING ── */
+#screen-loading{display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:12px}
+.spinner{width:36px;height:36px;border:3px solid var(--agc-gris-claro);border-top-color:var(--agc-azul);border-radius:50%;animation:spin 0.8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+.loading-txt{font-size:13px;color:var(--agc-gris-medio);font-weight:500}
+
+@media(max-width:600px){
+  .kiosk-wrap{grid-template-columns:1fr}
+  .kiosk-l{flex-direction:row;flex-wrap:wrap;justify-content:center}
+  .metrics{grid-template-columns:repeat(2,1fr)}
+  .emp-grid{grid-template-columns:1fr 1fr}
+  .reg-btns{grid-template-columns:repeat(2,1fr)}
+}
+</style>
+</head>
+<body>
+
+<!-- LOADING -->
+<div id="screen-loading">
+  <div style="background:var(--agc-azul);border-radius:12px;padding:1rem 1.5rem;text-align:center;margin-bottom:8px">
+    <span style="color:rgba(255,255,255,0.6);font-size:10px;font-weight:700;letter-spacing:0.15em;text-transform:uppercase;display:block">ASOCIADOS</span>
+    <span style="color:#fff;font-size:18px;font-weight:700;letter-spacing:0.05em;text-transform:uppercase">GARCÍA CASTRO</span>
+    <span style="color:var(--agc-dorado);font-size:28px;font-weight:700;display:block">GC</span>
+  </div>
+  <div class="spinner"></div>
+  <div class="loading-txt">Iniciando sistema de turnos...</div>
+</div>
+
+<!-- LOGIN -->
+<div id="screen-login">
+  <div class="login-card">
+    <div class="login-logo">
+      <span class="login-logo-text">ASOCIADOS</span>
+      <span class="login-logo-name">GARCÍA CASTRO</span>
+      <span class="login-gc">GC</span>
+    </div>
+    <div class="login-title">Sistema de Turnos</div>
+    <div class="login-sub">Ingresa tus credenciales para continuar</div>
+    <label>Correo electrónico</label>
+    <input type="email" id="login-email" placeholder="correo@asociadosgarciacastro.com">
+    <label>Contraseña</label>
+    <input type="password" id="login-pass" placeholder="••••••••">
+    <button class="btn-login" onclick="doLogin()">Ingresar</button>
+    <div class="login-error" id="login-error">Credenciales incorrectas. Verifica e intenta de nuevo.</div>
+    <div class="login-version">Turnos AGC v1.0 — Asociados García Castro SAS</div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="screen-app">
+  <div class="topbar">
+    <div class="topbar-brand">
+      <div class="topbar-gc">GC</div>
+      <div>
+        <div class="topbar-name">Turnos AGC</div>
+        <div class="topbar-sub" id="topbar-sub">Cargando...</div>
+      </div>
+    </div>
+    <div class="topbar-right">
+      <div class="topbar-user" id="topbar-user"></div>
+      <button class="btn-logout" onclick="doLogout()">Salir</button>
+    </div>
+  </div>
+
+  <div class="navtabs" id="navtabs"></div>
+
+  <div class="content">
+
+    <!-- ═══ VISTA: KIOSK ═══ -->
+    <div class="view" id="view-kiosk">
+      <div class="kiosk-wrap">
+        <div class="kiosk-l">
+          <div class="kiosk-gc">GC</div>
+          <div>
+            <div class="kiosk-store" id="kiosk-store-name">Mi Tienda</div>
+            <div class="kiosk-clock" id="kiosk-clock">--:--</div>
+            <div class="kiosk-date" id="kiosk-date"></div>
+          </div>
+          <div class="cam-box">
+            <div class="face-ring" id="k-ring">
+              <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,0.3)" stroke-width="1.5"><circle cx="12" cy="8" r="4"/><path d="M4 20c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+              <div class="face-lbl" id="k-clbl">En espera</div>
+            </div>
+          </div>
+          <div class="gps-bar">
+            <div class="gps-dot on" id="k-gps-dot"></div>
+            <span class="gps-txt" id="k-gps-txt">GPS fijo confirmado</span>
+          </div>
+        </div>
+        <div class="kiosk-r">
+          <!-- STEP 1: Selección -->
+          <div id="ks-sel">
+            <div class="kiosk-sec">¿Quién eres?</div>
+            <div class="emp-grid" id="k-emp-grid">
+              <!-- Se llena dinámicamente desde Firebase -->
+              <div style="font-size:12px;color:var(--agc-gris-medio);grid-column:span 2;padding:1rem;text-align:center">Cargando colaboradores...</div>
+            </div>
+            <div class="kiosk-sec">Tipo de registro</div>
+            <div class="reg-btns">
+              <button class="rb sel" id="rb-entrada" onclick="selTipo('entrada',this)">↓ Entrada</button>
+              <button class="rb" id="rb-alm-sal" onclick="selTipo('alm-sal',this)">🍽 Sal. almuerzo</button>
+              <button class="rb" id="rb-alm-reg" onclick="selTipo('alm-reg',this)">↩ Reg. almuerzo</button>
+              <button class="rb" id="rb-salida" onclick="selTipo('salida',this)">↑ Salida</button>
+            </div>
+            <div class="turno-badge" id="k-turno-badge"></div>
+            <div class="alert-kiosk" id="k-alert"></div>
+            <button class="btn-verificar" id="k-btn-next" onclick="kNext()" disabled>Verificar identidad</button>
+          </div>
+          <!-- STEP 2: Cámara -->
+          <div id="ks-scan" style="display:none">
+            <div style="font-size:14px;font-weight:700;color:var(--agc-azul);margin-bottom:4px">Mira a la cámara</div>
+            <div style="font-size:12px;color:var(--agc-gris-medio);margin-bottom:1rem">Mantén tu rostro dentro del círculo</div>
+            <div style="background:#f4f5f9;border-radius:8px;padding:10px;margin-bottom:1rem">
+              <div style="font-size:11px;color:var(--agc-gris-medio)">Registrando para:</div>
+              <div style="font-size:14px;font-weight:700;color:var(--agc-azul)" id="ks-emp-show"></div>
+              <div style="font-size:11px;color:var(--agc-gris-medio)" id="ks-tipo-show"></div>
+              <div style="font-size:11px;color:var(--agc-gris-medio)" id="ks-turno-show"></div>
+            </div>
+            <button class="btn-verificar" id="k-btn-scan" onclick="kScan()">📷 Tomar foto y verificar</button>
+            <button class="btn-sec" style="margin-top:6px" onclick="kReset()">Cancelar</button>
+          </div>
+          <!-- STEP 3: Resultado -->
+          <div id="ks-result" style="display:none">
+            <div class="result-box" id="k-res-box">
+              <div class="result-icon" id="k-res-icon"></div>
+              <div class="result-title" id="k-res-title"></div>
+              <div class="result-detail" id="k-res-detail"></div>
+            </div>
+            <button class="btn-sec" onclick="kReset()">← Nuevo registro</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ VISTA: DASHBOARD DIRECTORA ═══ -->
+    <div class="view" id="view-dashboard">
+      <div class="metrics" id="dash-metrics">
+        <div class="metric"><div class="metric-num verde" id="dm-open">—</div><div class="metric-lbl">Tiendas abiertas</div></div>
+        <div class="metric"><div class="metric-num rojo" id="dm-miss">—</div><div class="metric-lbl">Sin registrar</div></div>
+        <div class="metric"><div class="metric-num amarillo" id="dm-late">—</div><div class="metric-lbl">Con retraso</div></div>
+        <div class="metric"><div class="metric-num amarillo" id="dm-mallas">—</div><div class="metric-lbl">Mallas por aprobar</div></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Estado en tiempo real</div>
+        <div id="dash-stores">
+          <div style="font-size:12px;color:var(--agc-gris-medio);padding:1rem 0;text-align:center">Cargando tiendas...</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Mallas pendientes de aprobación</div>
+        <div id="dash-mallas">
+          <div style="font-size:12px;color:var(--agc-gris-medio)">Sin mallas pendientes.</div>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">Ausencias y horas extra pendientes</div>
+        <div id="dash-ausencias">
+          <div style="font-size:12px;color:var(--agc-gris-medio)">Sin solicitudes pendientes.</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ VISTA: MALLA (GERENTE) ═══ -->
+    <div class="view" id="view-malla">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+        <div class="card">
+          <div class="card-title">Configurar turno semanal</div>
+          <div class="form-group"><label>Colaborador</label>
+            <select id="g-emp"><option value="">Cargando...</option></select></div>
+          <div class="form-group"><label>Tipo de tienda</label>
+            <select id="g-tipo-tienda" onchange="updateDayRules()">
+              <option value="lun-sab">Lunes a Sábado</option>
+              <option value="dom-dom">Domingo a Domingo</option>
+            </select></div>
+          <div class="form-group"><label>¿Hay lunes festivo esta semana?</label>
+            <select id="g-festivo" onchange="updateDayRules()">
+              <option value="no">No</option>
+              <option value="si">Sí — aplicar excepción</option>
+            </select></div>
+          <div class="form-group"><label>Rol</label>
+            <select id="g-rol" onchange="updateDayRules()">
+              <option value="asesor">Asesor</option>
+              <option value="asesor-unico">Asesor único</option>
+              <option value="gerente">Gerente de tienda</option>
+            </select></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div class="form-group"><label>Entrada</label><input type="time" id="g-entrada" value="08:00" oninput="calcHoras()"></div>
+            <div class="form-group"><label>Salida almuerzo</label><input type="time" id="g-sal-alm" value="12:00" oninput="calcHoras()"></div>
+            <div class="form-group"><label>Duración almuerzo</label>
+              <select id="g-dur-alm" onchange="calcHoras()">
+                <option value="1">1 hora</option>
+                <option value="1.5">1.5 horas</option>
+                <option value="2">2 horas</option>
+              </select></div>
+            <div class="form-group"><label>Salida</label><input type="time" id="g-salida" value="17:00" oninput="calcHoras()"></div>
+          </div>
+          <div class="hours-bar hours-ok" id="g-hours-bar">
+            <span id="g-hours-txt">Calculando...</span>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">Días de la semana</div>
+          <div style="font-size:11px;color:var(--agc-gris-medio);margin-bottom:8px">Clic para cambiar entre trabajo (verde) y descanso (amarillo)</div>
+          <div class="day-grid" id="day-grid">
+            <button class="day-cell" onclick="toggleDay(0)">Lun</button>
+            <button class="day-cell" onclick="toggleDay(1)">Mar</button>
+            <button class="day-cell" onclick="toggleDay(2)">Mié</button>
+            <button class="day-cell" onclick="toggleDay(3)">Jue</button>
+            <button class="day-cell" onclick="toggleDay(4)">Vie</button>
+            <button class="day-cell" onclick="toggleDay(5)">Sáb</button>
+            <button class="day-cell" onclick="toggleDay(6)">Dom</button>
+          </div>
+          <div id="g-day-warn" style="display:none;font-size:11px;padding:7px 10px;border-radius:7px;margin-top:6px"></div>
+          <div id="g-hours-warn" style="display:none;font-size:11px;padding:7px 10px;border-radius:7px;background:#fce8e8;color:#c0392b;margin-top:4px"></div>
+          <div style="margin-top:1rem">
+            <div style="font-size:11px;font-weight:700;color:var(--agc-azul);text-transform:uppercase;letter-spacing:0.06em;margin-bottom:6px">Resumen</div>
+            <div id="g-summary" style="font-size:12px;color:var(--agc-gris-medio);line-height:1.8">Configura el turno para ver el resumen.</div>
+          </div>
+          <button class="btn-primary" style="margin-top:1rem" onclick="enviarMalla()">Enviar malla para aprobación</button>
+          <div id="g-send-ok" style="display:none;font-size:12px;padding:7px 10px;border-radius:7px;background:#e1f5ee;color:#0a7c5c;margin-top:8px"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ VISTA: AUSENCIAS ═══ -->
+    <div class="view" id="view-ausencias">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:1rem">
+        <div class="card">
+          <div class="card-title">Registrar ausencia</div>
+          <div class="form-group"><label>Colaborador</label>
+            <select id="aus-emp"><option>Cargando...</option></select></div>
+          <div class="form-group"><label>Tipo de ausencia</label>
+            <select id="aus-tipo" onchange="updateAusTipo()">
+              <option value="inc">Incapacidad médica</option>
+              <option value="vac">Vacaciones</option>
+              <option value="mat">Licencia maternidad/paternidad</option>
+              <option value="per-rem">Permiso remunerado</option>
+              <option value="per-no">Permiso no remunerado</option>
+              <option value="cal">Calamidad doméstica</option>
+              <option value="lut">Luto</option>
+            </select></div>
+          <div class="aus-tipo-info" id="aus-tipo-info"></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div class="form-group"><label>Fecha inicio</label><input type="date" id="aus-ini"></div>
+            <div class="form-group"><label>Fecha fin</label><input type="date" id="aus-fin"></div>
+          </div>
+          <div class="form-group"><label>Observación / soporte</label>
+            <input type="text" id="aus-obs" placeholder="Núm. incapacidad, EPS, motivo..."></div>
+          <button class="btn-primary" onclick="registrarAusencia()">Registrar ausencia</button>
+          <div id="aus-ok" style="display:none;font-size:12px;padding:7px 10px;border-radius:7px;background:#e1f5ee;color:#0a7c5c;margin-top:8px"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Ausencias del mes</div>
+          <div id="aus-list"><div style="font-size:12px;color:var(--agc-gris-medio)">Sin ausencias registradas este mes.</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ VISTA: REPORTE ═══ -->
+    <div class="view" id="view-reporte">
+      <div class="card">
+        <div class="card-title">Reporte de nómina</div>
+        <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;align-items:flex-end">
+          <div class="form-group" style="flex:1;min-width:120px;margin-bottom:0">
+            <label>Mes</label>
+            <select id="rep-mes">
+              <option>Junio 2026</option><option>Julio 2026</option>
+            </select>
+          </div>
+          <div class="form-group" style="flex:1;min-width:150px;margin-bottom:0">
+            <label>Tienda</label>
+            <select id="rep-tienda"><option value="all">Todas las tiendas</option></select>
+          </div>
+          <button class="btn-primary" style="width:auto;margin-top:0;padding:8px 16px" onclick="generarReporte()">Generar</button>
+          <button class="btn-sec" style="width:auto;padding:8px 16px" onclick="exportarExcel()">📥 Exportar Excel</button>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="rep-table" id="rep-tabla">
+            <thead>
+              <tr>
+                <th style="width:18%">Colaborador</th>
+                <th style="width:12%">Tienda</th>
+                <th class="tc" style="width:10%">Hrs trabajadas</th>
+                <th class="tc" style="width:8%">Hrs extra</th>
+                <th class="tc" style="width:8%">Dominicales</th>
+                <th class="tc" style="width:9%">Rec. nocturno</th>
+                <th class="tc" style="width:8%">Ausencias</th>
+                <th class="tc" style="width:9%">Tipo</th>
+                <th class="tc" style="width:7%">Faltas</th>
+                <th class="tc" style="width:7%">Tardanzas</th>
+                <th class="tc" style="width:6%">Asistencia</th>
+              </tr>
+            </thead>
+            <tbody id="rep-tbody">
+              <tr><td colspan="11" style="text-align:center;padding:1.5rem;color:var(--agc-gris-medio);font-size:12px">Selecciona el mes y genera el reporte.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /content -->
+</div><!-- /screen-app -->
+
+<!-- Firebase SDKs -->
+<script type="module">
+import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import { getFirestore, collection, doc, setDoc, getDoc, getDocs, addDoc, onSnapshot, query, where, orderBy, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+const firebaseConfig = {
+  apiKey: "AIzaSyBFGPk9xNHMUS-1OIuiC2fhP-T0djGvldo",
+  authDomain: "turnos-agc.firebaseapp.com",
+  projectId: "turnos-agc",
+  storageBucket: "turnos-agc.firebasestorage.app",
+  messagingSenderId: "171504261362",
+  appId: "1:171504261362:web:3aa44df740238adbcb986b"
+};
+
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+
+// ── ESTADO GLOBAL ──
+let currentUser = null;
+let currentRole = null;
+let currentEmpKey = null;
+let currentTipo = 'entrada';
+const dayStates = [0,0,0,0,0,0,0];
+
+const roleConfig = {
+  directora: { tabs: ['dashboard','malla','ausencias','reporte'], labels: ['📊 Dashboard','📅 Mallas','📋 Ausencias','📄 Reporte'], store: 'Todas las tiendas' },
+  gerente:   { tabs: ['kiosk','malla','ausencias'], labels: ['🖥 Kiosk tienda','📅 Malla semanal','📋 Ausencias'], store: '' },
+  empleado:  { tabs: ['kiosk'], labels: ['🖥 Registro de turno'], store: '' }
+};
+
+const tipoLabels = {
+  entrada:'Entrada al turno', 'alm-sal':'Salida a almuerzo',
+  'alm-reg':'Regreso de almuerzo', salida:'Salida del turno'
+};
+
+const ausTipos = {
+  inc:      { label:'Incapacidad médica',         auto:true,  info:'Se activa de inmediato. Adjuntar número de incapacidad y EPS.' },
+  vac:      { label:'Vacaciones',                  auto:false, info:'Requiere aprobación de la Directora de Operaciones. Solicitar con mínimo 15 días de anticipación.' },
+  mat:      { label:'Licencia maternidad/paternidad', auto:false, info:'Requiere aprobación. Adjuntar documento de la EPS o registro civil.' },
+  'per-rem':{ label:'Permiso remunerado',           auto:false, info:'Requiere aprobación. Máximo 3 días al mes según política.' },
+  'per-no': { label:'Permiso no remunerado',        auto:false, info:'Requiere aprobación. El colaborador debe ser notificado del descuento.' },
+  cal:      { label:'Calamidad doméstica',          auto:true,  info:'Se activa de inmediato. Máximo 3 días. Requiere soporte posterior.' },
+  lut:      { label:'Luto',                         auto:true,  info:'Se activa de inmediato. 5 días para familiar primer grado, 3 días para segundo grado.' }
+};
+
+// ── HELPERS ──
+const pad2 = n => n < 10 ? '0'+n : ''+n;
+const fmt12 = t => { const [h,m] = t.split(':').map(Number); return (h%12||12)+':'+pad2(m)+(h<12?' am':' pm'); };
+const parseT = t => { const [h,m] = t.split(':').map(Number); return h*60+m; };
+const now24  = () => { const n = new Date(); return n.getHours()*60+n.getMinutes(); };
+
+// ── AUTH ──
+window.doLogin = async () => {
+  const email = document.getElementById('login-email').value.trim();
+  const pass  = document.getElementById('login-pass').value;
+  const errEl = document.getElementById('login-error');
+  errEl.style.display = 'none';
+  try {
+    await signInWithEmailAndPassword(auth, email, pass);
+  } catch(e) {
+    errEl.style.display = 'block';
+  }
+};
+
+window.doLogout = () => signOut(auth);
+
+onAuthStateChanged(auth, async user => {
+  document.getElementById('screen-loading').style.display = 'none';
+  if (!user) {
+    document.getElementById('screen-login').style.display = 'flex';
+    document.getElementById('screen-app').style.display = 'none';
+    return;
+  }
+  document.getElementById('screen-login').style.display = 'none';
+  document.getElementById('screen-app').style.display = 'flex';
+  currentUser = user;
+  const snap = await getDoc(doc(db, 'usuarios', user.uid));
+  const data = snap.exists() ? snap.data() : { rol: 'empleado', nombre: user.email, tienda: 'Mi Tienda' };
+  currentRole = data.rol || 'empleado';
+  const cfg = roleConfig[currentRole] || roleConfig.empleado;
+  document.getElementById('topbar-sub').textContent = data.tienda || 'AGC';
+  document.getElementById('topbar-user').textContent = (data.nombre || user.email) + '\n' + (currentRole === 'directora' ? 'Directora de Operaciones' : currentRole === 'gerente' ? 'Gerente de tienda' : 'Colaborador');
+  document.getElementById('kiosk-store-name').textContent = data.tienda || 'Mi Tienda';
+  buildNav(cfg);
+  showView(cfg.tabs[0]);
+  loadEmpleados(data.tienda);
+  if (currentRole === 'directora') loadDashboard();
+});
+
+// ── NAV ──
+function buildNav(cfg) {
+  const nav = document.getElementById('navtabs');
+  nav.innerHTML = '';
+  cfg.tabs.forEach((t, i) => {
+    const btn = document.createElement('button');
+    btn.className = 'navtab' + (i === 0 ? ' active' : '');
+    btn.textContent = cfg.labels[i];
+    btn.onclick = () => { document.querySelectorAll('.navtab').forEach(b=>b.classList.remove('active')); btn.classList.add('active'); showView(t); };
+    nav.appendChild(btn);
+  });
+}
+
+function showView(id) {
+  document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
+  const el = document.getElementById('view-'+id);
+  if (el) el.classList.add('active');
+}
+
+// ── RELOJ ──
+setInterval(() => {
+  const n = new Date();
+  const h = n.getHours()%12||12, m = pad2(n.getMinutes()), s = pad2(n.getSeconds()), ap = n.getHours()<12?'am':'pm';
+  const clk = document.getElementById('kiosk-clock'); if(clk) clk.textContent = h+':'+m+':'+s+' '+ap;
+  const dias = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
+  const meses = ['enero','febrero','marzo','abril','mayo','junio','julio','agosto','septiembre','octubre','noviembre','diciembre'];
+  const dt = document.getElementById('kiosk-date'); if(dt) dt.textContent = dias[n.getDay()]+' '+n.getDate()+' de '+meses[n.getMonth()];
+}, 1000);
+
+// ── EMPLEADOS ──
+async function loadEmpleados(tienda) {
+  let q;
+  if (currentRole === 'directora') q = collection(db,'empleados');
+  else q = query(collection(db,'empleados'), where('tienda','==',tienda));
+  const snaps = await getDocs(q);
+  const emps = [];
+  snaps.forEach(d => emps.push({ id:d.id, ...d.data() }));
+
+  // Kiosk grid
+  const grid = document.getElementById('k-emp-grid');
+  grid.innerHTML = '';
+  if (emps.length === 0) {
+    grid.innerHTML = '<div style="font-size:12px;color:var(--agc-gris-medio);grid-column:span 2;padding:1rem;text-align:center">No hay colaboradores registrados en esta tienda aún.</div>';
+  } else {
+    emps.forEach(e => {
+      const btn = document.createElement('button');
+      btn.className = 'emp-btn';
+      btn.dataset.id = e.id;
+      btn.innerHTML = `<div class="emp-btn-name">${e.nombre}</div><div class="emp-btn-role">${e.rol||'Asesor'} · ${fmt12(e.entrada||'08:00')}–${fmt12(e.salida||'17:00')}</div>`;
+      btn.onclick = () => selEmp(e.id, e, btn);
+      grid.appendChild(btn);
+    });
+  }
+
+  // Selects de malla y ausencias
+  const selG = document.getElementById('g-emp');
+  const selA = document.getElementById('aus-emp');
+  selG.innerHTML = '<option value="">Seleccionar colaborador</option>';
+  selA.innerHTML = '<option value="">Seleccionar colaborador</option>';
+  emps.forEach(e => {
+    selG.innerHTML += `<option value="${e.id}">${e.nombre}</option>`;
+    selA.innerHTML += `<option value="${e.id}">${e.nombre}</option>`;
+  });
+}
+
+// ── KIOSK ──
+let selectedEmpData = null;
+
+function selEmp(id, data, btn) {
+  currentEmpKey = id;
+  selectedEmpData = data;
+  document.querySelectorAll('.emp-btn').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+  document.getElementById('k-btn-next').disabled = false;
+  const badge = document.getElementById('k-turno-badge');
+  badge.style.display = 'block';
+  badge.textContent = `Turno: ${fmt12(data.entrada||'08:00')} – ${fmt12(data.salida||'17:00')} · Almuerzo ${fmt12(data.salAlm||'12:00')} (${data.durAlm||1}h)`;
+  document.getElementById('k-alert').style.display = 'none';
+}
+
+window.selTipo = (t, btn) => {
+  currentTipo = t;
+  document.querySelectorAll('.rb').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+};
+
+window.kNext = () => {
+  if (!selectedEmpData) return;
+  const e = selectedEmpData;
+  const now = now24();
+  const entrada  = parseT(e.entrada  || '08:00');
+  const salAlm   = parseT(e.salAlm   || '12:00');
+  const durAlm   = parseFloat(e.durAlm || 1);
+  const regAlm   = salAlm + Math.round(durAlm * 60);
+  const salida   = parseT(e.salida   || '17:00');
+  const salidaMax = e.otAprobada ? parseT(e.otHora) : salida;
+
+  const refs = { entrada, 'alm-sal': salAlm, 'alm-reg': regAlm, salida };
+  const ref = refs[currentTipo];
+  const alertEl = document.getElementById('k-alert');
+
+  if (now < ref - 5) {
+    alertEl.className = 'alert-kiosk alert-warn';
+    alertEl.textContent = `Tu registro de "${tipoLabels[currentTipo]}" aún no está disponible. Faltan ${ref-5-now} minuto(s).`;
+    alertEl.style.display = 'block';
+    return;
+  }
+  if (currentTipo === 'salida' && now > salidaMax + 2 && !e.otAprobada) {
+    alertEl.className = 'alert-kiosk alert-err';
+    alertEl.textContent = `Tu turno terminó a las ${fmt12(e.salida||'17:00')}. No tienes tiempo extra autorizado. Para horas extra necesitas aprobación de la Directora de Operaciones.`;
+    alertEl.style.display = 'block';
+    return;
+  }
+
+  alertEl.style.display = 'none';
+  document.getElementById('ks-sel').style.display = 'none';
+  document.getElementById('ks-scan').style.display = 'block';
+  document.getElementById('ks-emp-show').textContent = e.nombre;
+  document.getElementById('ks-tipo-show').textContent = tipoLabels[currentTipo];
+  document.getElementById('ks-turno-show').textContent = `Turno: ${fmt12(e.entrada||'08:00')} – ${fmt12(e.salida||'17:00')}`;
+  document.getElementById('k-ring').className = 'face-ring';
+  document.getElementById('k-clbl').textContent = 'Listo para escanear';
+  document.getElementById('k-clbl').className = 'face-lbl';
+  document.getElementById('k-btn-scan').disabled = false;
+};
+
+window.kScan = async () => {
+  document.getElementById('k-btn-scan').disabled = true;
+  const ring = document.getElementById('k-ring');
+  ring.className = 'face-ring scanning';
+  document.getElementById('k-clbl').textContent = 'Analizando...';
+
+  // En la versión real aquí va Face-api.js
+  // Por ahora simulamos verificación exitosa
+  await new Promise(r => setTimeout(r, 2200));
+  const ok = true; // ← Face-api.js irá aquí
+
+  ring.className = 'face-ring ' + (ok ? 'ok' : 'fail');
+  document.getElementById('k-clbl').textContent = ok ? '¡Verificado!' : 'No coincide';
+  document.getElementById('k-clbl').className = 'face-lbl ' + (ok ? 'g' : 'r');
+
+  await new Promise(r => setTimeout(r, 700));
+  document.getElementById('ks-scan').style.display = 'none';
+  document.getElementById('ks-result').style.display = 'block';
+
+  const now = new Date();
+  const h = now.getHours()%12||12, m = pad2(now.getMinutes()), ap = now.getHours()<12?'am':'pm';
+  const tStr = h+':'+m+' '+ap;
+  const box = document.getElementById('k-res-box');
+
+  if (ok) {
+    box.className = 'result-box ok';
+    document.getElementById('k-res-icon').textContent = '✓';
+    document.getElementById('k-res-title').textContent = tipoLabels[currentTipo] + ' registrada';
+    document.getElementById('k-res-detail').textContent = selectedEmpData.nombre + ' · ' + tStr + ' · GPS confirmado';
+    // Guardar en Firebase
+    await addDoc(collection(db, 'registros'), {
+      empleadoId: currentEmpKey,
+      empleadoNombre: selectedEmpData.nombre,
+      tienda: selectedEmpData.tienda,
+      tipo: currentTipo,
+      timestamp: serverTimestamp(),
+      hora: tStr,
+      gps: 'Fijo en tienda',
+      verificado: true
+    });
+  } else {
+    box.className = 'result-box err';
+    document.getElementById('k-res-icon').textContent = '✗';
+    document.getElementById('k-res-title').textContent = 'Verificación fallida';
+    document.getElementById('k-res-detail').textContent = 'El rostro no coincide. Se notificó a la Directora.';
+  }
+
+  setTimeout(() => kReset(), 5000);
+};
+
+window.kReset = () => {
+  document.getElementById('ks-result').style.display = 'none';
+  document.getElementById('ks-scan').style.display = 'none';
+  document.getElementById('ks-sel').style.display = 'block';
+  document.querySelectorAll('.emp-btn').forEach(b=>b.classList.remove('sel'));
+  document.querySelectorAll('.rb').forEach(b=>b.classList.remove('sel'));
+  document.getElementById('rb-entrada').classList.add('sel');
+  document.getElementById('k-btn-next').disabled = true;
+  document.getElementById('k-btn-scan').disabled = false;
+  document.getElementById('k-turno-badge').style.display = 'none';
+  document.getElementById('k-alert').style.display = 'none';
+  document.getElementById('k-ring').className = 'face-ring';
+  document.getElementById('k-clbl').textContent = 'En espera';
+  document.getElementById('k-clbl').className = 'face-lbl';
+  currentEmpKey = null; selectedEmpData = null; currentTipo = 'entrada';
+};
+
+// ── MALLA ──
+const dayStatesLocal = [0,0,0,0,0,0,0];
+
+window.updateDayRules = () => {
+  const tipo = document.getElementById('g-tipo-tienda').value;
+  const festivo = document.getElementById('g-festivo').value;
+  const rol = document.getElementById('g-rol').value;
+  for(let i=0;i<7;i++) dayStatesLocal[i]=0;
+  if (tipo === 'lun-sab') {
+    if (festivo === 'no') dayStatesLocal[6] = 2;
+    else dayStatesLocal[0] = 2;
+    for(let i=0;i<7;i++) if(dayStatesLocal[i]===0) dayStatesLocal[i]=1;
+  } else {
+    for(let i=0;i<7;i++) dayStatesLocal[i]=1;
+    if (rol==='gerente') dayStatesLocal[0]=2;
+    else if(rol==='asesor-unico') dayStatesLocal[1]=2;
+  }
+  renderDays(); calcHoras();
+};
+
+window.toggleDay = i => {
+  if (i===4||i===5) { showDayWarn('Viernes y sábado no pueden ser día de descanso.','warn'); return; }
+  dayStatesLocal[i] = (dayStatesLocal[i]+1)%3;
+  if (i===6 && dayStatesLocal[6]===2) showDayWarn('El domingo como descanso requiere aprobación de la Directora.','info');
+  else hideDayWarn();
+  renderDays(); calcHoras();
+};
+
+function renderDays() {
+  const labels = ['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+  document.querySelectorAll('#day-grid .day-cell').forEach((cell,i) => {
+    cell.className = 'day-cell' + (dayStatesLocal[i]===1?' work':dayStatesLocal[i]===2?' rest':'');
+    cell.textContent = labels[i];
+  });
+}
+
+function showDayWarn(msg,type) {
+  const d=document.getElementById('g-day-warn');
+  d.style.display='block'; d.textContent=msg;
+  d.style.background=type==='warn'?'#fce8e8':'#e8eeff';
+  d.style.color=type==='warn'?'#c0392b':'#0C0D4D';
+}
+function hideDayWarn(){ document.getElementById('g-day-warn').style.display='none'; }
+
+window.calcHoras = () => {
+  const entrada = document.getElementById('g-entrada').value;
+  const salida  = document.getElementById('g-salida').value;
+  const durAlm  = parseFloat(document.getElementById('g-dur-alm').value);
+  if(!entrada||!salida) return;
+  const hDia = (parseT(salida)-parseT(entrada))/60 - durAlm;
+  const dias = dayStatesLocal.filter(d=>d===1).length;
+  const hSem = Math.round(hDia*dias*10)/10;
+  const bar = document.getElementById('g-hours-bar');
+  document.getElementById('g-hours-txt').textContent = `${hDia.toFixed(1)}h/día · ${dias} días · Total: ${hSem}h semanales`;
+  bar.className = 'hours-bar ' + (hSem>44?'hours-err':hSem>40?'hours-warn':'hours-ok');
+  const warn = document.getElementById('g-hours-warn');
+  if(hSem>44){ warn.style.display='block'; warn.textContent=`⚠ Supera las 44h semanales. Se requerirá aprobación de la Directora para las ${(hSem-44).toFixed(1)}h adicionales.`; }
+  else warn.style.display='none';
+  const salAlm = document.getElementById('g-sal-alm').value;
+  const regAlm = salAlm ? (() => { const m=parseT(salAlm)+Math.round(durAlm*60); return pad2(Math.floor(m/60))+':'+pad2(m%60); })() : '--:--';
+  document.getElementById('g-summary').innerHTML = `Horario: ${fmt12(entrada)} – ${fmt12(salida)}<br>Almuerzo: ${fmt12(salAlm||'12:00')} – ${fmt12(regAlm)} (${durAlm}h)<br>Días trabajados: ${dias} · Horas/día: ${hDia.toFixed(1)}h<br>Total semana: <strong>${hSem}h</strong> ${hSem>44?'⚠ requiere aprobación OT':'✓'}`;
+};
+
+window.enviarMalla = async () => {
+  const empId = document.getElementById('g-emp').value;
+  if(!empId){ alert('Selecciona un colaborador'); return; }
+  const entrada = document.getElementById('g-entrada').value;
+  const salida  = document.getElementById('g-salida').value;
+  const salAlm  = document.getElementById('g-sal-alm').value;
+  const durAlm  = parseFloat(document.getElementById('g-dur-alm').value);
+  const hDia    = (parseT(salida)-parseT(entrada))/60-durAlm;
+  const dias    = dayStatesLocal.filter(d=>d===1).length;
+  const hSem    = Math.round(hDia*dias*10)/10;
+  const hasSun  = dayStatesLocal[6]===1;
+  const warns   = [];
+  if(hSem>44) warns.push('Supera 44h semanales');
+  if(hasSun)  warns.push('Domingo laboral requiere aprobación');
+  await addDoc(collection(db,'mallas'), {
+    empleadoId: empId,
+    entrada, salida, salAlm, durAlm,
+    dias: dayStatesLocal.slice(),
+    hSem, warns,
+    estado: 'pendiente',
+    creadaPor: currentUser.uid,
+    timestamp: serverTimestamp()
+  });
+  const ok = document.getElementById('g-send-ok');
+  ok.textContent = 'Malla enviada a la Directora de Operaciones para aprobación.' + (warns.length ? ' Incluye: '+warns.join(', ')+'.':'');
+  ok.style.display = 'block';
+  setTimeout(()=>ok.style.display='none',4000);
+};
+
+// ── AUSENCIAS ──
+window.updateAusTipo = () => {
+  const tipo = document.getElementById('aus-tipo').value;
+  const info = ausTipos[tipo];
+  const box = document.getElementById('aus-tipo-info');
+  box.style.display='block';
+  box.textContent = (info.auto ? '✓ Automática — ' : '⏳ Requiere aprobación — ') + info.info;
+  box.style.background = info.auto ? '#e1f5ee' : '#fff3cd';
+  box.style.color = info.auto ? '#0a7c5c' : '#856404';
+};
+
+window.registrarAusencia = async () => {
+  const empId = document.getElementById('aus-emp').value;
+  const tipo  = document.getElementById('aus-tipo').value;
+  const ini   = document.getElementById('aus-ini').value;
+  const fin   = document.getElementById('aus-fin').value;
+  const obs   = document.getElementById('aus-obs').value;
+  if(!empId||!ini||!fin){ alert('Completa todos los campos'); return; }
+  const info  = ausTipos[tipo];
+  const dias  = Math.round((new Date(fin)-new Date(ini))/(86400000))+1;
+  await addDoc(collection(db,'ausencias'), {
+    empleadoId: empId, tipo, label: info.label, ini, fin, dias, obs,
+    estado: info.auto ? 'aprobada-auto' : 'pendiente',
+    creadaPor: currentUser.uid,
+    timestamp: serverTimestamp()
+  });
+  const ok = document.getElementById('aus-ok');
+  ok.textContent = info.auto ? 'Ausencia registrada automáticamente.' : 'Solicitud enviada a la Directora de Operaciones para aprobación.';
+  ok.style.display='block';
+  setTimeout(()=>ok.style.display='none',4000);
+};
+
+// ── DASHBOARD ──
+async function loadDashboard() {
+  // Mallas pendientes
+  const qm = query(collection(db,'mallas'), where('estado','==','pendiente'));
+  const snapM = await getDocs(qm);
+  document.getElementById('dm-mallas').textContent = snapM.size;
+  const mallaDiv = document.getElementById('dash-mallas');
+  if(snapM.empty){ mallaDiv.innerHTML='<div style="font-size:12px;color:var(--agc-gris-medio)">Sin mallas pendientes.</div>'; }
+  else {
+    mallaDiv.innerHTML='';
+    snapM.forEach(d => {
+      const m = d.data();
+      const card = document.createElement('div');
+      card.className = 'appr-card';
+      card.innerHTML = `<div class="appr-head"><div><div class="appr-name">Malla — ${m.hSem}h semanales</div><div class="appr-detail">${m.warns&&m.warns.length?'⚠ '+m.warns.join(' · '):'Dentro de los límites ✓'}</div></div><span class="pill pill-pend">Pendiente</span></div><div class="appr-btns"><button class="bsm bsm-ok" onclick="aprobarMalla('${d.id}',this)">✓ Aprobar</button><button class="bsm bsm-no" onclick="rechazarMalla('${d.id}',this)">✗ Rechazar</button></div>`;
+      mallaDiv.appendChild(card);
+    });
+  }
+  // Ausencias pendientes
+  const qa = query(collection(db,'ausencias'), where('estado','==','pendiente'));
+  const snapA = await getDocs(qa);
+  const ausDiv = document.getElementById('dash-ausencias');
+  if(snapA.empty){ ausDiv.innerHTML='<div style="font-size:12px;color:var(--agc-gris-medio)">Sin solicitudes pendientes.</div>'; }
+  else {
+    ausDiv.innerHTML='';
+    snapA.forEach(d => {
+      const a = d.data();
+      const card = document.createElement('div');
+      card.className = 'appr-card';
+      card.innerHTML = `<div class="appr-head"><div><div class="appr-name">${a.label} · ${a.dias} día(s)</div><div class="appr-detail">${a.ini} – ${a.fin}<br>${a.obs||''}</div></div><span class="pill pill-pend">Pendiente</span></div><div class="appr-btns"><button class="bsm bsm-ok" onclick="aprobarAus('${d.id}',this)">✓ Aprobar</button><button class="bsm bsm-no" onclick="rechazarAus('${d.id}',this)">✗ Rechazar</button></div>`;
+      ausDiv.appendChild(card);
+    });
+  }
+}
+
+window.aprobarMalla = async (id, btn) => {
+  const { updateDoc } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+  await updateDoc(doc(db,'mallas',id), { estado:'aprobada' });
+  btn.closest('.appr-card').querySelector('.pill').className='pill pill-appr';
+  btn.closest('.appr-card').querySelector('.pill').textContent='Aprobada';
+  btn.closest('.appr-btns').innerHTML='<span style="font-size:11px;color:#0a7c5c">✓ Malla activada</span>';
+  document.getElementById('dm-mallas').textContent = Math.max(0,parseInt(document.getElementById('dm-mallas').textContent)-1);
+};
+
+window.rechazarMalla = async (id, btn) => {
+  const { updateDoc } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+  await updateDoc(doc(db,'mallas',id), { estado:'rechazada' });
+  btn.closest('.appr-card').querySelector('.pill').className='pill pill-rej';
+  btn.closest('.appr-card').querySelector('.pill').textContent='Rechazada';
+  btn.closest('.appr-btns').innerHTML='<span style="font-size:11px;color:#c0392b">✗ Gerente notificado para corregir</span>';
+  document.getElementById('dm-mallas').textContent = Math.max(0,parseInt(document.getElementById('dm-mallas').textContent)-1);
+};
+
+window.aprobarAus = async (id, btn) => {
+  const { updateDoc } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+  await updateDoc(doc(db,'ausencias',id), { estado:'aprobada' });
+  btn.closest('.appr-card').querySelector('.pill').className='pill pill-appr';
+  btn.closest('.appr-card').querySelector('.pill').textContent='Aprobada';
+  btn.closest('.appr-btns').innerHTML='<span style="font-size:11px;color:#0a7c5c">✓ Aprobada — gerente notificado</span>';
+};
+
+window.rechazarAus = async (id, btn) => {
+  const { updateDoc } = await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+  await updateDoc(doc(db,'ausencias',id), { estado:'rechazada' });
+  btn.closest('.appr-card').querySelector('.pill').className='pill pill-rej';
+  btn.closest('.appr-card').querySelector('.pill').textContent='Rechazada';
+  btn.closest('.appr-btns').innerHTML='<span style="font-size:11px;color:#c0392b">✗ Gerente notificado</span>';
+};
+
+// ── REPORTE ──
+window.generarReporte = async () => {
+  const snaps = await getDocs(collection(db,'registros'));
+  const tbody = document.getElementById('rep-tbody');
+  if(snaps.empty){ tbody.innerHTML='<tr><td colspan="11" style="text-align:center;padding:1.5rem;color:var(--agc-gris-medio);font-size:12px">Sin registros para el período seleccionado.</td></tr>'; return; }
+  const regs = {};
+  snaps.forEach(d => {
+    const r = d.data();
+    if(!regs[r.empleadoId]) regs[r.empleadoId] = { nombre:r.empleadoNombre, tienda:r.tienda, entradas:0, extras:0, dom:0, noc:0, aus:0, faltas:0, tardanzas:0 };
+    if(r.tipo==='entrada') regs[r.empleadoId].entradas++;
+  });
+  tbody.innerHTML = '';
+  Object.values(regs).forEach(r => {
+    const hTrab = r.entradas * 8;
+    const asist = r.entradas > 0 ? Math.round((r.entradas/(r.entradas+r.faltas))*100) : 0;
+    tbody.innerHTML += `<tr><td><div style="font-weight:500;font-size:12px">${r.nombre}</div></td><td style="font-size:11px;color:var(--agc-gris-medio)">${r.tienda}</td><td class="tc num-ok">${hTrab}h</td><td class="tc num-ot">${r.extras}h</td><td class="tc num-dom">${r.dom}</td><td class="tc num-rec">${r.noc}h</td><td class="tc num-aus">${r.aus}</td><td class="tc" style="font-size:10px">—</td><td class="tc num-fal">${r.faltas}</td><td class="tc" style="color:#856404">${r.tardanzas}</td><td class="tc" style="color:#0a7c5c;font-weight:500">${asist}%</td></tr>`;
+  });
+};
+
+window.exportarExcel = () => {
+  const rows = [['Colaborador','Tienda','Hrs trabajadas','Hrs extra','Dominicales','Rec. nocturno','Ausencias','Faltas','Tardanzas','Asistencia']];
+  document.querySelectorAll('#rep-tbody tr').forEach(tr => {
+    const cells = Array.from(tr.querySelectorAll('td')).map(td=>td.textContent.trim());
+    if(cells.length>3) rows.push(cells);
+  });
+  const csv = rows.map(r=>r.join(';')).join('\n');
+  const blob = new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a'); a.href=url; a.download='reporte-nomina-AGC.csv'; a.click();
+};
+
+// Init
+window.updateDayRules();
+window.updateAusTipo();
+</script>
+</body>
+</html>
