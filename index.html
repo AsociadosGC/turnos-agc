@@ -153,6 +153,25 @@ body{font-family:var(--font);background:var(--bg);min-height:100vh;color:#1a1a2e
 .rep-table tr:hover td{background:#f9f9ff}
 .tc{text-align:center}.num-ok{color:var(--verde-t);font-weight:700}.num-ot{color:var(--rojo);font-weight:700}
 .num-dom{color:#534AB7;font-weight:700}.num-aus{color:var(--azul);font-weight:700}
+/* MODAL */
+.modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;padding:1rem}
+.modal-overlay.open{display:flex}
+.modal{background:#fff;border-radius:16px;box-shadow:0 8px 40px rgba(12,13,77,.2);width:100%;max-width:800px;max-height:90vh;display:flex;flex-direction:column;overflow:hidden}
+.modal-header{background:var(--azul);padding:1rem 1.25rem;display:flex;align-items:center;justify-content:space-between;flex-shrink:0}
+.modal-title{color:#fff;font-size:14px;font-weight:700}
+.modal-close{background:rgba(255,255,255,.15);color:#fff;border:none;border-radius:6px;padding:4px 10px;font-family:var(--font);font-size:12px;cursor:pointer}
+.modal-body{padding:1.25rem;overflow-y:auto;flex:1}
+.modal-footer{padding:1rem 1.25rem;border-top:1px solid var(--gris-c);display:flex;gap:8px;flex-shrink:0;align-items:flex-end;flex-wrap:wrap}
+.rechazo-form{flex:1;min-width:200px}
+.rechazo-form label{font-size:11px;font-weight:700;color:var(--rojo);display:block;margin-bottom:4px;text-transform:uppercase}
+.rechazo-form textarea{width:100%;font-family:var(--font);font-size:12px;padding:7px 9px;border:1.5px solid var(--rojo);border-radius:8px;resize:none;color:#1a1a2e;background:#fff;outline:none}
+/* AVISO RECHAZO GERENTE */
+.rechazo-aviso{background:var(--rojo-c);border:1.5px solid var(--rojo);border-radius:10px;padding:1rem 1.25rem;margin-bottom:1rem}
+.rechazo-aviso-title{font-size:13px;font-weight:700;color:var(--rojo);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+.rechazo-item{background:#fff;border-radius:8px;padding:8px 10px;margin-bottom:6px;border-left:3px solid var(--rojo)}
+.rechazo-item-name{font-size:12px;font-weight:700;color:#1a1a2e}
+.rechazo-item-motivo{font-size:11px;color:var(--rojo);margin-top:2px}
+.rechazo-item-fecha{font-size:10px;color:var(--gris-m);margin-top:1px}
 /* DASHBOARD */
 .store-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--gris-c)}
 .store-row:last-child{border-bottom:none}
@@ -164,6 +183,31 @@ body{font-family:var(--font);background:var(--bg);min-height:100vh;color:#1a1a2e
 </style>
 </head>
 <body>
+
+<!-- MODAL DETALLE MALLA -->
+<div class="modal-overlay" id="modal-malla">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-malla-title">Detalle de malla</div>
+      <button class="modal-close" onclick="cerrarModal()">✕ Cerrar</button>
+    </div>
+    <div class="modal-body">
+      <div id="modal-malla-body"><div style="font-size:12px;color:var(--gris-m)">Cargando...</div></div>
+    </div>
+    <div class="modal-footer">
+      <div class="rechazo-form" id="rechazo-form" style="display:none">
+        <label>Motivo del rechazo (obligatorio)</label>
+        <textarea id="rechazo-motivo" rows="2" placeholder="Ej: El asesor X tiene más de 42h, corregir turno del martes..."></textarea>
+      </div>
+      <div style="display:flex;gap:8px;flex-shrink:0">
+        <button class="btn-sm-ok" id="modal-btn-aprobar" onclick="confirmarAprobar()">✓ Aprobar malla</button>
+        <button class="btn-sm-no" id="modal-btn-rechazar" onclick="mostrarRechazo()">✗ Rechazar</button>
+        <button class="btn-sm-no" id="modal-btn-confirmar-rechazo" style="display:none" onclick="confirmarRechazo()">Confirmar rechazo</button>
+        <button class="btn-s" id="modal-btn-cancelar-rechazo" style="display:none;padding:4px 10px;font-size:11px" onclick="cancelarRechazo()">Cancelar</button>
+      </div>
+    </div>
+  </div>
+</div>
 
 <div id="scr-load">
   <div style="background:var(--azul);border-radius:12px;padding:1rem 1.5rem;text-align:center">
@@ -207,6 +251,9 @@ body{font-family:var(--font);background:var(--bg);min-height:100vh;color:#1a1a2e
   </div>
   <div class="navtabs" id="navtabs"></div>
   <div class="content">
+
+    <!-- AVISO RECHAZOS GERENTE (visible en todas las vistas del gerente) -->
+    <div id="avisos-rechazo" style="display:none;margin-bottom:0"></div>
 
     <!-- KIOSK -->
     <div class="view" id="view-kiosk">
@@ -582,7 +629,7 @@ onAuthStateChanged(auth,async user=>{
   document.getElementById('k-store').textContent=curTienda;
   buildNav();
   if(curRole==='directora'){show('dashboard');loadDashboard();}
-  else{show('kiosk');await loadPersonal();await loadTurnos();}
+  else{show('kiosk');await loadPersonal();await loadTurnos();cargarAvisosRechazo();}
 });
 
 // ── NAV ──
@@ -652,8 +699,38 @@ function loadSelectPersonal(){
 function loadSelectOtrosi(){
   const sel=document.getElementById('eq-otrosi-emp');if(!sel)return;
   sel.innerHTML='<option value="">Seleccionar...</option>';
-  personalCache.filter(p=>p.tipo==='MT'&&p.cargo==='ASESOR').forEach(p=>sel.innerHTML+=`<option value="${p.id}">${p.nombre}</option>`);
+  // Incluir todos los asesores MT activos
+  const mt=personalCache.filter(p=>p.tipo==='MT'&&p.cargo==='ASESOR');
+  if(mt.length===0)sel.innerHTML='<option value="">Sin asesores MT en esta tienda</option>';
+  else mt.forEach(p=>sel.innerHTML+=`<option value="${p.id}">${p.nombre}</option>`);
 }
+
+async function cargarAvisosRechazo(){
+  const avisoEl=document.getElementById('avisos-rechazo');if(!avisoEl)return;
+  // Buscar mallas rechazadas de esta tienda
+  const q=query(collection(db,'mallas'),where('tienda','==',curTienda),where('estado','==','rechazada'));
+  const snaps=await getDocs(q);
+  const rechazadas=[];
+  snaps.forEach(d=>{const m=d.data();if(m.motivoRechazo)rechazadas.push({id:d.id,...m});});
+  if(rechazadas.length===0){avisoEl.style.display='none';return;}
+  avisoEl.style.display='block';
+  let html=`<div class="rechazo-aviso"><div class="rechazo-aviso-title">⚠ Mallas rechazadas — requieren corrección</div>`;
+  rechazadas.forEach(m=>{
+    const fecha=m.fechaRechazo?new Date(m.fechaRechazo).toLocaleDateString('es-CO'):'';
+    html+=`<div class="rechazo-item"><div class="rechazo-item-name">Malla semana ${m.semana}</div><div class="rechazo-item-motivo">Motivo: ${m.motivoRechazo}</div><div class="rechazo-item-fecha">${fecha?'Rechazada el '+fecha:''}</div><button class="btn-s" style="margin-top:6px;padding:4px 10px;font-size:11px" onclick="irACorregir('${m.semana}','${m.id}')">Ir a corregir →</button></div>`;
+  });
+  html+='</div>';
+  avisoEl.innerHTML=html;
+}
+
+window.irACorregir=async(semana,mallaId)=>{
+  // Navegar a la pestaña malla y precargar la semana
+  document.querySelectorAll('.ntab').forEach(b=>{if(b.textContent.includes('Malla')){b.click();}});
+  setTimeout(()=>{
+    const input=document.getElementById('m-semana');
+    if(input){input.value=semana;}
+  },300);
+};
 
 window.agregarPersona=async()=>{
   const ced=document.getElementById('eq-ced').value.trim();
@@ -1033,7 +1110,14 @@ async function loadDashboard(){
   document.getElementById('dm-mallas').textContent=snapM.size;
   const mallaDiv=document.getElementById('dash-mallas');mallaDiv.innerHTML='';
   if(snapM.empty){mallaDiv.innerHTML='<div style="font-size:12px;color:var(--gris-m)">Sin mallas pendientes.</div>';}
-  else{snapM.forEach(d=>{const m=d.data();const card=document.createElement('div');card.className='appr-card';card.innerHTML=`<div class="appr-head"><div><div class="appr-name">${m.tienda} · semana ${m.semana}</div></div><span class="pill p-pend">Pendiente</span></div><div class="appr-btns"><button class="btn-sm-ok" onclick="aprobarMalla('${d.id}',this)">✓ Aprobar</button><button class="btn-sm-no" onclick="rechazarMalla('${d.id}',this)">✗ Rechazar</button></div>`;mallaDiv.appendChild(card);});}
+  else{
+    snapM.forEach(d=>{
+      const m=d.data();
+      const card=document.createElement('div');card.className='appr-card';
+      card.innerHTML=`<div class="appr-head"><div><div class="appr-name">${m.tienda}</div><div class="appr-detail">Semana del ${m.semana}</div></div><span class="pill p-pend">Pendiente</span></div><div class="appr-btns"><button class="btn-s" style="padding:4px 10px;font-size:11px" onclick="abrirModal('${d.id}',this.closest('.appr-card'))">👁 Ver detalle</button></div>`;
+      mallaDiv.appendChild(card);
+    });
+  }
 
   // Ausencias + Otrosí pendientes
   const qa=query(collection(db,'ausencias'),where('estado','==','pendiente'));
@@ -1071,8 +1155,124 @@ async function loadDashboard(){
   });
 }
 
-window.aprobarMalla=async(id,btn)=>{await updateDoc(doc(db,'mallas',id),{estado:'aprobada'});btn.closest('.appr-card').querySelector('.pill').className='pill p-ok';btn.closest('.appr-card').querySelector('.pill').textContent='Aprobada';btn.closest('.appr-btns').innerHTML='<span style="font-size:11px;color:var(--verde-t)">✓ Malla activada</span>';document.getElementById('dm-mallas').textContent=Math.max(0,parseInt(document.getElementById('dm-mallas').textContent)-1);};
-window.rechazarMalla=async(id,btn)=>{await updateDoc(doc(db,'mallas',id),{estado:'rechazada'});btn.closest('.appr-card').querySelector('.pill').className='pill p-rej';btn.closest('.appr-card').querySelector('.pill').textContent='Rechazada';btn.closest('.appr-btns').innerHTML='<span style="font-size:11px;color:var(--rojo)">✗ Gerente notificado</span>';document.getElementById('dm-mallas').textContent=Math.max(0,parseInt(document.getElementById('dm-mallas').textContent)-1);};
+// ── MODAL MALLA ──
+let modalMallaId=null, modalMallaCard=null;
+
+window.abrirModal=async(id,card)=>{
+  modalMallaId=id;modalMallaCard=card;
+  const snap=await getDoc(doc(db,'mallas',id));
+  const m=snap.data();
+  document.getElementById('modal-malla-title').textContent=`${m.tienda} · Semana del ${m.semana}`;
+  // Construir tabla detalle
+  const data=m.data||{};
+  const tienda=m.tienda;
+  // Obtener personal de esa tienda
+  const qp=query(collection(db,'personal'),where('tienda','==',tienda),where('activo','==',true));
+  const snapP=await getDocs(qp);
+  const personal={};snapP.forEach(d=>personal[d.id]={...d.data(),id:d.id});
+  // Obtener turnos maestros de esa tienda
+  const qt=query(collection(db,'turnos-maestros'),where('tienda','==',tienda));
+  const snapT=await getDocs(qt);
+  const turnos={};snapT.forEach(d=>turnos[d.id]={...d.data(),id:d.id});
+  turnos['DESCANSO']={nombre:'DESCANSO',horas:0};
+  turnos['INCAPACIDAD']={nombre:'INCAPACIDAD',horas:0};
+  turnos['VACACIONES']={nombre:'VACACIONES',horas:0};
+  turnos['PERMISO']={nombre:'PERMISO',horas:0};
+
+  let html=`<div style="overflow-x:auto"><table class="malla-table"><thead><tr>
+    <th style="width:18%;text-align:left;padding-left:8px">Persona</th>
+    ${DIAS.map(d=>`<th>${d}</th>`).join('')}
+    <th>Total h</th><th>Estado</th>
+  </tr></thead><tbody>`;
+
+  Object.entries(data).forEach(([empId,dias])=>{
+    const p=personal[empId];
+    if(!p)return;
+    const diaDescanso=getDiaDescanso(tienda,p.cargo);
+    const esGer=p.cargo==='GERENTE'||p.cargo==='SUBGERENTE';
+    const maxH=esGer?999:p.tipo==='MT'?21:42;
+    let hTot=0,dom=0;
+    const celdas=DIAS.map((_,col)=>{
+      const val=dias[col]||'DESCANSO';
+      const t=turnos[val];
+      const jsDay=colToJsDay(col);
+      const esDom=diaDescanso!==null&&jsDay===diaDescanso&&!['DESCANSO','INCAPACIDAD','VACACIONES','PERMISO'].includes(val);
+      if(t&&!['DESCANSO','INCAPACIDAD','VACACIONES','PERMISO'].includes(val)){hTot+=t.horas;if(esDom)dom++;}
+      const bg=val==='DESCANSO'?'var(--am-c)':['INCAPACIDAD','VACACIONES','PERMISO'].includes(val)?'var(--az-c)':esDom?'#fff0f0':'#f0fff8';
+      const color=val==='DESCANSO'?'var(--am-t)':['INCAPACIDAD','VACACIONES','PERMISO'].includes(val)?'var(--az-t)':esDom?'#8b0000':'var(--verde-t)';
+      return `<td style="text-align:center;background:${bg};color:${color};font-size:10px;font-weight:500;padding:4px 2px">${t?.nombre||val}</td>`;
+    }).join('');
+    const ot=!esGer?Math.max(0,Math.round((hTot-maxH)*10)/10):0;
+    const estadoHtml=esGer?'<span style="font-size:10px;color:var(--gris-m)">D&C</span>':ot>0?`<span style="font-size:10px;color:var(--rojo);font-weight:700">+${ot}h OT</span>`:`<span style="font-size:10px;color:var(--verde-t)">OK</span>`;
+    html+=`<tr><td style="padding-left:8px"><div style="font-size:12px;font-weight:500">${p.nombre.split(' ').slice(0,2).join(' ')}</div><div style="font-size:10px;color:var(--gris-m)">${p.cargo}·${p.tipo}${dom>0?` · 🔵${dom} domin.`:''}</div></td>${celdas}<td style="text-align:center;font-weight:700;font-size:12px;color:var(--azul)">${hTot}h</td><td style="text-align:center">${estadoHtml}</td></tr>`;
+  });
+  html+='</tbody></table></div>';
+  html+=`<div style="margin-top:8px;font-size:11px;color:var(--gris-m)">🟡 Descanso &nbsp; 🔵 Ausencia &nbsp; 🔴 Trabaja en día de descanso asignado (recargo dominical) &nbsp; 🟢 Turno normal</div>`;
+  document.getElementById('modal-malla-body').innerHTML=html;
+  // Reset botones
+  document.getElementById('rechazo-form').style.display='none';
+  document.getElementById('rechazo-motivo').value='';
+  document.getElementById('modal-btn-rechazar').style.display='inline-flex';
+  document.getElementById('modal-btn-confirmar-rechazo').style.display='none';
+  document.getElementById('modal-btn-cancelar-rechazo').style.display='none';
+  document.getElementById('modal-malla').classList.add('open');
+};
+
+window.cerrarModal=()=>document.getElementById('modal-malla').classList.remove('open');
+
+window.mostrarRechazo=()=>{
+  document.getElementById('rechazo-form').style.display='block';
+  document.getElementById('modal-btn-rechazar').style.display='none';
+  document.getElementById('modal-btn-confirmar-rechazo').style.display='inline-flex';
+  document.getElementById('modal-btn-cancelar-rechazo').style.display='inline-flex';
+};
+
+window.cancelarRechazo=()=>{
+  document.getElementById('rechazo-form').style.display='none';
+  document.getElementById('modal-btn-rechazar').style.display='inline-flex';
+  document.getElementById('modal-btn-confirmar-rechazo').style.display='none';
+  document.getElementById('modal-btn-cancelar-rechazo').style.display='none';
+};
+
+window.confirmarAprobar=async()=>{
+  await updateDoc(doc(db,'mallas',modalMallaId),{estado:'aprobada'});
+  if(modalMallaCard){
+    modalMallaCard.querySelector('.pill').className='pill p-ok';
+    modalMallaCard.querySelector('.pill').textContent='Aprobada';
+    modalMallaCard.querySelector('.appr-btns').innerHTML='<span style="font-size:11px;color:var(--verde-t)">✓ Malla activada</span>';
+  }
+  document.getElementById('dm-mallas').textContent=Math.max(0,parseInt(document.getElementById('dm-mallas').textContent)-1);
+  cerrarModal();
+};
+
+window.confirmarRechazo=async()=>{
+  const motivo=document.getElementById('rechazo-motivo').value.trim();
+  if(!motivo){alert('Escribe el motivo del rechazo antes de confirmar.');return;}
+  await updateDoc(doc(db,'mallas',modalMallaId),{estado:'rechazada',motivoRechazo:motivo,fechaRechazo:new Date().toISOString()});
+  if(modalMallaCard){
+    modalMallaCard.querySelector('.pill').className='pill p-rej';
+    modalMallaCard.querySelector('.pill').textContent='Rechazada';
+    modalMallaCard.querySelector('.appr-btns').innerHTML=`<span style="font-size:11px;color:var(--rojo)">✗ Rechazada — ${motivo}</span>`;
+  }
+  document.getElementById('dm-mallas').textContent=Math.max(0,parseInt(document.getElementById('dm-mallas').textContent)-1);
+  cerrarModal();
+};
+
+// Compat (ya no se usan directamente pero por si acaso)
+window.aprobarMalla=async(id,btn)=>{
+  await updateDoc(doc(db,'mallas',id),{estado:'aprobada'});
+  btn.closest('.appr-card').querySelector('.pill').className='pill p-ok';
+  btn.closest('.appr-card').querySelector('.pill').textContent='Aprobada';
+  btn.closest('.appr-btns').innerHTML='<span style="font-size:11px;color:var(--verde-t)">✓ Malla activada</span>';
+  document.getElementById('dm-mallas').textContent=Math.max(0,parseInt(document.getElementById('dm-mallas').textContent)-1);
+};
+window.rechazarMalla=async(id,btn)=>{
+  await updateDoc(doc(db,'mallas',id),{estado:'rechazada'});
+  btn.closest('.appr-card').querySelector('.pill').className='pill p-rej';
+  btn.closest('.appr-card').querySelector('.pill').textContent='Rechazada';
+  btn.closest('.appr-btns').innerHTML='<span style="font-size:11px;color:var(--rojo)">✗ Rechazada</span>';
+  document.getElementById('dm-mallas').textContent=Math.max(0,parseInt(document.getElementById('dm-mallas').textContent)-1);
+};
 window.aprobarAus=async(id,btn)=>{await updateDoc(doc(db,'ausencias',id),{estado:'aprobada'});btn.closest('.appr-card').querySelector('.pill').className='pill p-ok';btn.closest('.appr-card').querySelector('.pill').textContent='Aprobada';btn.closest('.appr-btns').innerHTML='<span style="font-size:11px;color:var(--verde-t)">✓ Aprobada</span>';};
 window.rechazarAus=async(id,btn)=>{await updateDoc(doc(db,'ausencias',id),{estado:'rechazada'});btn.closest('.appr-card').querySelector('.pill').className='pill p-rej';btn.closest('.appr-card').querySelector('.pill').textContent='Rechazada';btn.closest('.appr-btns').innerHTML='<span style="font-size:11px;color:var(--rojo)">✗ Rechazada</span>';};
 window.aprobarOtrosi=async(id,empId,fin,btn)=>{
