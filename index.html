@@ -601,13 +601,13 @@ body{font-family:var(--font);background:var(--bg);min-height:100vh;color:#1a1a2e
       <div class="card">
         <div class="card-title">Historial de mallas</div>
         <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;align-items:flex-end">
-          <div class="fg" style="margin-bottom:0;flex:1;min-width:150px">
+          <div class="fg" style="margin-bottom:0;flex:1;min-width:140px">
             <label>Tienda</label>
             <select id="hist-tienda-sel" onchange="cargarHistorialMallas()">
               <option value="all">Todas las tiendas</option>
             </select>
           </div>
-          <div class="fg" style="margin-bottom:0;flex:1;min-width:120px">
+          <div class="fg" style="margin-bottom:0;flex:1;min-width:110px">
             <label>Estado</label>
             <select id="hist-estado-sel" onchange="cargarHistorialMallas()">
               <option value="all">Todos</option>
@@ -615,6 +615,15 @@ body{font-family:var(--font);background:var(--bg);min-height:100vh;color:#1a1a2e
               <option value="pendiente">Pendientes</option>
               <option value="rechazada">Rechazadas</option>
               <option value="borrador">Borradores</option>
+            </select>
+          </div>
+          <div class="fg" style="margin-bottom:0;flex:1;min-width:120px">
+            <label>Filtrar por cargo</label>
+            <select id="hist-cargo-sel" onchange="cargarHistorialMallas()">
+              <option value="all">Todos los cargos</option>
+              <option value="GERENTE">Solo Gerentes</option>
+              <option value="SUBGERENTE">Solo Subgerentes</option>
+              <option value="ASESOR">Solo Asesores</option>
             </select>
           </div>
           <button class="btn-p" style="width:auto;margin-top:0;padding:8px 14px" onclick="cargarHistorialMallas()">Buscar</button>
@@ -718,7 +727,8 @@ const AUS_TIPOS={
 };
 const ROLES={
   directora:{tabs:['dashboard','historial-mallas','reporte'],labels:['📊 Dashboard','📅 Historial mallas','📄 Reporte nómina']},
-  gerente:{tabs:['kiosk','equipo','turnos','malla','ausencias'],labels:['🖥 Kiosk','👥 Mi equipo','⏰ Mis turnos','📅 Malla semanal','📋 Ausencias']}
+  gerente:{tabs:['kiosk','equipo','turnos','malla','ausencias'],labels:['🖥 Kiosk','👥 Mi equipo','⏰ Mis turnos','📅 Malla semanal','📋 Ausencias']},
+  consulta:{tabs:['historial-mallas'],labels:['📅 Historial mallas']}
 };
 
 // ── ESTADO ──
@@ -772,11 +782,12 @@ onAuthStateChanged(auth,async user=>{
   const snap=await getDoc(doc(db,'usuarios',user.uid));
   const data=snap.exists()?snap.data():{rol:'gerente',tienda:'Mi Tienda'};
   curRole=data.rol||'gerente';curTienda=data.tienda||'Mi Tienda';
-  document.getElementById('tb-sub').textContent=curTienda;
-  document.getElementById('tb-user').textContent=curRole==='directora'?'Directora de Operaciones':'Gerente de tienda';
+  document.getElementById('tb-sub').textContent=curRole==='directora'?'Directora de Operaciones':curRole==='consulta'?'Consulta — Solo lectura':'Gerente de tienda · '+curTienda;
+  document.getElementById('tb-user').textContent=curRole==='directora'?'Directora de Operaciones':curRole==='consulta'?'Directora Comercial':'Gerente de tienda';
   document.getElementById('k-store').textContent=curTienda;
   buildNav();
   if(curRole==='directora'){show('dashboard');loadDashboard();}
+  else if(curRole==='consulta'){show('historial-mallas');initHistorialTiendas();cargarHistorialMallas();}
   else{show('kiosk');await loadPersonal();await loadTurnos();cargarAvisosRechazo();}
 });
 
@@ -1876,32 +1887,29 @@ async function initHistorialTiendas(){
 }
 
 window.cargarHistorialMallas=async()=>{
-  const tienda=document.getElementById('hist-tienda-sel').value;
-  const estado=document.getElementById('hist-estado-sel').value;
+  const tienda=document.getElementById('hist-tienda-sel')?.value||'all';
+  const estado=document.getElementById('hist-estado-sel')?.value||'all';
+  const cargo=document.getElementById('hist-cargo-sel')?.value||'all';
   const list=document.getElementById('hist-mallas-list');
+  const esConsulta=curRole==='consulta';
   list.innerHTML='<div style="font-size:12px;color:var(--gris-m)">Buscando...</div>';
 
-  let q;
   const condiciones=[];
   if(tienda!=='all')condiciones.push(where('tienda','==',tienda));
   if(estado!=='all')condiciones.push(where('estado','==',estado));
-  q=query(collection(db,'mallas'),...condiciones);
-
+  const q=query(collection(db,'mallas'),...condiciones);
   const snaps=await getDocs(q);
   list.innerHTML='';
   if(snaps.empty){list.innerHTML='<div style="font-size:12px;color:var(--gris-m)">Sin mallas para los filtros seleccionados.</div>';return;}
 
-  // Ordenar por semana desc
   const mallas=[];
   snaps.forEach(d=>mallas.push({id:d.id,...d.data()}));
   mallas.sort((a,b)=>b.semana?.localeCompare(a.semana||'')||0);
 
   for(const m of mallas){
-    // Obtener personal de esa tienda para mostrar nombres
     const qp=query(collection(db,'personal'),where('tienda','==',m.tienda));
     const snapP=await getDocs(qp);
     const personal={};snapP.forEach(d=>personal[d.id]={...d.data(),id:d.id});
-    // Obtener turnos maestros
     const qt=query(collection(db,'turnos-maestros'),where('tienda','==',m.tienda));
     const snapT=await getDocs(qt);
     const turnos={};snapT.forEach(d=>turnos[d.id]={...d.data()});
@@ -1910,19 +1918,24 @@ window.cargarHistorialMallas=async()=>{
     const estadoLabel=m.estado==='aprobada'?'Aprobada':m.estado==='rechazada'?'Rechazada':m.estado==='borrador'?'Borrador':'Pendiente';
 
     const card=document.createElement('div');card.className='malla-hist-card';
-    const headId=`hist-head-${m.id}`;const bodyId=`hist-body-${m.id}`;
+    const headId=`hist-head-${m.id}`;const bodyId=`hist-body-${m.id}`;const dotId=`dot-hist-${m.id}`;
 
-    // Construir tabla de la malla
+    // Filtrar personas por cargo si aplica
+    const dataFiltrada={};
+    Object.entries(m.data||{}).forEach(([empId,dias])=>{
+      const p=personal[empId];if(!p)return;
+      if(cargo==='all'||p.cargo===cargo) dataFiltrada[empId]=dias;
+    });
+
     let tablaHtml=`<table class="malla-table"><thead><tr>
-      <th style="width:18%;text-align:left;padding-left:8px">Persona</th>
-      <th style="width:8%">Cargo</th>
+      <th style="width:16%;text-align:left;padding-left:8px">Persona</th>
+      <th style="width:7%">Cargo</th>
       ${DIAS.map(d=>`<th>${d}</th>`).join('')}
       <th>Total h</th>
     </tr></thead><tbody>`;
 
-    Object.entries(m.data||{}).forEach(([empId,dias])=>{
-      const p=personal[empId];
-      if(!p)return;
+    Object.entries(dataFiltrada).forEach(([empId,dias])=>{
+      const p=personal[empId];if(!p)return;
       const esGer=p.cargo==='GERENTE'||p.cargo==='SUBGERENTE';
       const maxH=esGer?999:p.tipo==='MT'?21:42;
       let hTot=0;
@@ -1944,26 +1957,27 @@ window.cargarHistorialMallas=async()=>{
     tablaHtml+='</tbody></table>';
     if(m.motivoRechazo) tablaHtml+=`<div style="margin-top:8px;font-size:11px;padding:7px 10px;border-radius:7px;background:var(--rojo-c);color:var(--rojo)">Motivo de rechazo: ${m.motivoRechazo}</div>`;
 
-    // Dotación por hora en historial
-    const dotId=`dot-hist-${m.id}`;
-    tablaHtml+=`<div style="margin-top:1rem">
-      <div style="font-size:12px;font-weight:700;color:var(--azul);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">
-        <span>Dotación por hora</span>
-        <div style="display:flex;gap:4px">
-          <button class="dot-filt-btn active" onclick="filtrarDotHist('todos',this,'${dotId}',${JSON.stringify(m.data||{}).replace(/'/g,"&#39;")})">Todos</button>
-          <button class="dot-filt-btn" onclick="filtrarDotHist('TC',this,'${dotId}',null)">TC</button>
-          <button class="dot-filt-btn" onclick="filtrarDotHist('MT',this,'${dotId}',null)">MT</button>
-          <button class="dot-filt-btn" onclick="filtrarDotHist('GER',this,'${dotId}',null)">Ger/Sub</button>
+    // Dotación — solo para directora, no para consulta
+    if(!esConsulta&&cargo==='all'){
+      tablaHtml+=`<div style="margin-top:1rem">
+        <div style="font-size:12px;font-weight:700;color:var(--azul);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">
+          <span>Dotación por hora</span>
+          <div style="display:flex;gap:4px">
+            <button class="dot-filt-btn active" onclick="filtrarDotHist('todos',this,'${dotId}',${JSON.stringify(m.data||{})})">Todos</button>
+            <button class="dot-filt-btn" onclick="filtrarDotHist('TC',this,'${dotId}',null)">TC</button>
+            <button class="dot-filt-btn" onclick="filtrarDotHist('MT',this,'${dotId}',null)">MT</button>
+            <button class="dot-filt-btn" onclick="filtrarDotHist('GER',this,'${dotId}',null)">Ger/Sub</button>
+          </div>
         </div>
-      </div>
-      <div style="overflow-x:auto" id="${dotId}">${generarTablaDotModal(m.data||{},personal,turnos,'todos')}</div>
-    </div>`;
+        <div style="overflow-x:auto" id="${dotId}">${generarTablaDotModal(m.data||{},personal,turnos,'todos')}</div>
+      </div>`;
+    }
 
-    const cantPersonas=Object.keys(m.data||{}).length;
+    const cantPersonas=Object.keys(dataFiltrada).length;
     card.innerHTML=`
       <button class="malla-hist-head" onclick="toggleHistBody('${bodyId}','${headId}')">
         <div>
-          <div class="malla-hist-title">${m.tienda} · Semana del ${m.semana}</div>
+          <div class="malla-hist-title">${m.tienda} · Semana del ${m.semana}${cargo!=='all'?' · '+cargo:''}</div>
           <div class="malla-hist-sub">${cantPersonas} persona(s) · <span class="pill ${estadoPill}">${estadoLabel}</span></div>
         </div>
         <span id="${headId}" style="font-size:14px;color:var(--gris-m)">▼</span>
