@@ -838,11 +838,19 @@ async function loadPersonal(){
 
 function renderKioskGrid(){
   const grid=document.getElementById('k-grid');grid.innerHTML='';
-  if(personalCache.length===0){grid.innerHTML='<div style="font-size:12px;color:var(--gris-m);grid-column:span 3;padding:1rem;text-align:center">Sin personal registrado.</div>';return;}
-  personalCache.forEach(p=>{
+  const activos=personalCache.filter(p=>!p.bloqueado);
+  if(activos.length===0){grid.innerHTML='<div style="font-size:12px;color:var(--gris-m);grid-column:span 3;padding:1rem;text-align:center">Sin personal disponible.</div>';return;}
+  activos.forEach(p=>{
     const btn=document.createElement('button');btn.className='emp-btn';
     btn.innerHTML=`<div class="eb-name">${p.nombre.split(' ').slice(0,2).join(' ')}</div><div class="eb-cargo">${p.cargo} · ${p.tipo}</div>`;
     btn.onclick=()=>selEmp(p.id,p,btn);
+    grid.appendChild(btn);
+  });
+  // Mostrar bloqueados como no disponibles
+  personalCache.filter(p=>p.bloqueado).forEach(p=>{
+    const btn=document.createElement('button');btn.className='emp-btn';btn.disabled=true;
+    btn.style.opacity='0.4';btn.style.cursor='not-allowed';
+    btn.innerHTML=`<div class="eb-name" style="color:var(--rojo)">${p.nombre.split(' ').slice(0,2).join(' ')}</div><div class="eb-cargo">🔒 Bloqueado</div>`;
     grid.appendChild(btn);
   });
 }
@@ -872,6 +880,7 @@ function renderEquipoList(){
       <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0">
         <span class="pill ${p.cargo==='GERENTE'?'p-ger':p.tipo==='TC'||esOtrosi?'p-tc':'p-mt'}">${esOtrosi?'Otrosí TC':p.tipo}</span>
         <button class="btn-deact" style="color:var(--azul);border-color:var(--azul)" onclick="abrirModalFoto('${p.id}','${p.nombre.replace(/'/g,"\\'")}')">📷 ${tieneFoto?'Actualizar foto':'Registrar foto'}</button>
+        ${p.bloqueado?`<span class="pill p-rej">🔒 Bloqueado</span>`:''}
         <button class="btn-deact" style="color:var(--am-t);border-color:var(--am-t)" onclick="desactivar('${p.id}','${p.nombre.replace(/'/g,"\\'")}')">⏸ Desactivar</button>
         <button class="btn-deact" style="color:var(--rojo);border-color:var(--rojo)" onclick="eliminarPersona('${p.id}','${p.nombre.replace(/'/g,"\\'")}')">🗑 Eliminar</button>
       </div>`;
@@ -906,19 +915,38 @@ async function cargarAvisosRechazo(){
   let html=`<div class="rechazo-aviso"><div class="rechazo-aviso-title">⚠ Mallas rechazadas — requieren corrección</div>`;
   rechazadas.forEach(m=>{
     const fecha=m.fechaRechazo?new Date(m.fechaRechazo).toLocaleDateString('es-CO'):'';
-    html+=`<div class="rechazo-item"><div class="rechazo-item-name">Malla semana ${m.semana}</div><div class="rechazo-item-motivo">Motivo: ${m.motivoRechazo}</div><div class="rechazo-item-fecha">${fecha?'Rechazada el '+fecha:''}</div><button class="btn-s" style="margin-top:6px;padding:4px 10px;font-size:11px" onclick="irACorregir('${m.semana}','${m.id}')">Ir a corregir →</button></div>`;
+    html+=`<div class="rechazo-item" id="rechazo-item-${m.id}">
+      <div class="rechazo-item-name">Malla semana ${m.semana}</div>
+      <div class="rechazo-item-motivo">Motivo: ${m.motivoRechazo}</div>
+      <div class="rechazo-item-fecha">${fecha?'Rechazada el '+fecha:''}</div>
+      <div style="display:flex;gap:6px;margin-top:6px">
+        <button class="btn-s" style="padding:4px 10px;font-size:11px" onclick="irACorregir('${m.semana}','${m.id}')">✏ Ir a corregir</button>
+        <button class="btn-deact" style="color:var(--rojo);border-color:var(--rojo);padding:4px 10px;font-size:11px" onclick="eliminarMallaRechazada('${m.id}')">🗑 Eliminar</button>
+      </div>
+    </div>`;
   });
   html+='</div>';
   avisoEl.innerHTML=html;
 }
 
 window.irACorregir=async(semana,mallaId)=>{
-  // Navegar a la pestaña malla y precargar la semana
   document.querySelectorAll('.ntab').forEach(b=>{if(b.textContent.includes('Malla')){b.click();}});
-  setTimeout(()=>{
-    const input=document.getElementById('m-semana');
-    if(input){input.value=semana;}
-  },300);
+  setTimeout(()=>{const input=document.getElementById('m-semana');if(input)input.value=semana;},300);
+};
+
+window.eliminarMallaRechazada=async(mallaId)=>{
+  if(!confirm('¿Eliminar esta malla rechazada?\n\nPodrás crear una malla nueva para esa semana desde cero.'))return;
+  try{
+    const {deleteDoc}=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+    await deleteDoc(doc(db,'mallas',mallaId));
+    // Quitar el item del aviso
+    const item=document.getElementById(`rechazo-item-${mallaId}`);
+    if(item)item.remove();
+    // Si no quedan items, recargar avisos
+    await cargarAvisosRechazo();
+  }catch(e){
+    alert('Error al eliminar: '+e.message);
+  }
 };
 
 window.agregarPersona=async()=>{
@@ -1632,21 +1660,53 @@ window.kScan=async()=>{
     // Actualizar banner tardanzas del gerente
     cargarTardanzasHoy();
   }else{
+    // Incrementar contador de intentos fallidos
+    const intentosKey=`intentos_${curEmpId}_${new Date().toISOString().split('T')[0]}`;
+    const intentosActuales=(parseInt(localStorage.getItem(intentosKey)||'0'))+1;
+    localStorage.setItem(intentosKey,intentosActuales);
+
     box.className='res-box err';
     document.getElementById('k-res-icon').textContent='✗';
-    document.getElementById('k-res-title').textContent='Verificación fallida';
-    document.getElementById('k-res-detail').textContent=motivoFallo||'El rostro no coincide. Notificado a Directora.';
-    await addDoc(collection(db,'registros'),{
-      cedula:curEmpData.cedula||curEmpData.id,
-      nombre:curEmpData.nombre,
-      tienda:curTienda,
-      tipo:curTipo,
-      hora:tStr,
-      fecha:new Date().toISOString().split('T')[0],
-      verificado:false,
-      motivoFallo,
-      timestamp:serverTimestamp()
-    });
+
+    if(intentosActuales>=3){
+      // Bloquear persona en Firebase
+      await updateDoc(doc(db,'personal',curEmpId),{
+        bloqueado:true,
+        motivoBloqueo:`3 intentos fallidos de verificación facial el ${new Date().toLocaleDateString('es-CO')}`,
+        fechaBloqueo:new Date().toISOString()
+      });
+      // Guardar alerta en Firebase para directora
+      await addDoc(collection(db,'alertas-seguridad'),{
+        cedula:curEmpData.cedula||curEmpId,
+        nombre:curEmpData.nombre,
+        tienda:curTienda,
+        tipo:'bloqueo-facial',
+        mensaje:`3 intentos fallidos de verificación facial. Acceso bloqueado.`,
+        fecha:new Date().toISOString().split('T')[0],
+        hora:tStr,
+        estado:'pendiente',
+        timestamp:serverTimestamp()
+      });
+      document.getElementById('k-res-title').textContent='Acceso bloqueado';
+      document.getElementById('k-res-detail').textContent='3 intentos fallidos. Tu acceso ha sido bloqueado. Contacta al encargado de la tienda.';
+      // Recargar grid para que desaparezca esta persona
+      await loadPersonal();
+    } else {
+      // Guardar alerta de intento fallido
+      await addDoc(collection(db,'alertas-seguridad'),{
+        cedula:curEmpData.cedula||curEmpId,
+        nombre:curEmpData.nombre,
+        tienda:curTienda,
+        tipo:'fallo-facial',
+        mensaje:`Intento ${intentosActuales}/3 fallido de verificación facial. ${motivoFallo}`,
+        fecha:new Date().toISOString().split('T')[0],
+        hora:tStr,
+        estado:'info',
+        timestamp:serverTimestamp()
+      });
+      document.getElementById('k-res-title').textContent=`Verificación fallida (intento ${intentosActuales}/3)`;
+      document.getElementById('k-res-detail').textContent=`${motivoFallo||'El rostro no coincide.'} Puedes intentarlo de nuevo (${3-intentosActuales} intento(s) restante(s)).`;
+    }
   }
   setTimeout(()=>kReset(),5000);
 };
@@ -2016,15 +2076,25 @@ async function cargarAlertas(){
   alertasDiv.innerHTML='';
   let total=0;
 
-  // Verificaciones faciales fallidas
-  const qf=query(collection(db,'registros'),where('fecha','==',hoy),where('verificado','==',false));
+  // Alertas de seguridad (fallos y bloqueos faciales)
+  const qf=query(collection(db,'alertas-seguridad'),where('fecha','==',hoy));
   const snapF=await getDocs(qf);
   snapF.forEach(d=>{
     total++;
     const r=d.data();
+    const esBloqueo=r.tipo==='bloqueo-facial';
     const div=document.createElement('div');
-    div.className='alerta-row alerta-facial';
-    div.innerHTML=`<div class="alerta-icon">🔴</div><div class="alerta-info"><div class="alerta-title">Verificación facial fallida — ${r.tienda}</div><div class="alerta-detail">${r.nombre} · ${r.motivoFallo||'Rostro no coincide'}</div></div><div class="alerta-hora">${r.hora}</div>`;
+    div.className='alerta-row '+(esBloqueo?'alerta-facial':'alerta-ot');
+    div.innerHTML=`
+      <div class="alerta-icon">${esBloqueo?'🔒':'🔴'}</div>
+      <div class="alerta-info">
+        <div class="alerta-title">${esBloqueo?'Acceso bloqueado':'Fallo de verificación'} — ${r.tienda}</div>
+        <div class="alerta-detail">${r.nombre} · ${r.mensaje}</div>
+      </div>
+      <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0">
+        <span class="alerta-hora">${r.hora}</span>
+        ${esBloqueo?`<button class="btn-sm-ok" style="font-size:10px" onclick="desbloquearPersona('${r.cedula}','${r.nombre.replace(/'/g,"\\'")}','${d.id}',this)">🔓 Desbloquear</button>`:''}
+      </div>`;
     alertasDiv.appendChild(div);
   });
 
@@ -2036,12 +2106,25 @@ async function cargarAlertas(){
     const o=d.data();
     const div=document.createElement('div');
     div.className='alerta-row alerta-ot';
-    div.innerHTML=`<div class="alerta-icon">⏰</div><div class="alerta-info"><div class="alerta-title">Salida tardía — ${o.tienda}</div><div class="alerta-detail">${o.nombre} · Salida programada ${fmt12(o.horaSalidaProgramada)} · Salió ${fmt12(o.horaSalidaReal.replace(' am','').replace(' pm',''))||o.horaSalidaReal} · +${o.minutosExtra} min</div></div><div style="flex-shrink:0"><button class="btn-sm-ok" style="font-size:10px" onclick="revisarOTAuto('${d.id}',this)">Revisar</button></div>`;
+    div.innerHTML=`<div class="alerta-icon">⏰</div><div class="alerta-info"><div class="alerta-title">Salida tardía — ${o.tienda}</div><div class="alerta-detail">${o.nombre} · Salida programada ${fmt12(o.horaSalidaProgramada)} · +${o.minutosExtra} min</div></div><div style="flex-shrink:0"><button class="btn-sm-ok" style="font-size:10px" onclick="revisarOTAuto('${d.id}',this)">Revisar</button></div>`;
     alertasDiv.appendChild(div);
   });
 
   if(total===0) alertasDiv.innerHTML='<div style="font-size:12px;color:var(--gris-m)">Sin alertas hoy. ✓</div>';
 }
+
+window.desbloquearPersona=async(cedula,nombre,alertaId,btn)=>{
+  if(!confirm(`¿Desbloquear a ${nombre}?\n\nPodrá volver a registrarse en el kiosk.`))return;
+  try{
+    await updateDoc(doc(db,'personal',cedula),{bloqueado:false,motivoBloqueo:null,fechaDesbloqueo:new Date().toISOString()});
+    await updateDoc(doc(db,'alertas-seguridad',alertaId),{estado:'desbloqueado'});
+    btn.closest('.alerta-row').style.opacity='0.5';
+    btn.textContent='✓ Desbloqueado';
+    btn.disabled=true;
+  }catch(e){
+    alert('Error al desbloquear: '+e.message);
+  }
+};
 
 window.revisarOTAuto=async(id,btn)=>{
   const accion=confirm('¿Aprobar esta hora extra?\n\nAceptar = se registra como hora extra autorizada\nCancelar = se marca como no autorizada')? 'aprobada':'rechazada';
