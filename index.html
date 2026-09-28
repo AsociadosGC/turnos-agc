@@ -201,6 +201,27 @@ body{font-family:var(--font);background:var(--bg);min-height:100vh;color:#1a1a2e
 .badge-tard{font-size:10px;padding:1px 6px;border-radius:8px;background:var(--am-c);color:var(--am-t);font-weight:700}
 .badge-ok-s{font-size:10px;padding:1px 6px;border-radius:8px;background:var(--verde-c);color:var(--verde-t);font-weight:700}
 .badge-sin{font-size:10px;padding:1px 6px;border-radius:8px;background:var(--gris-c);color:var(--gris-m)}
+/* DOTACIÓN POR HORA */
+.dot-table{width:100%;border-collapse:collapse;min-width:500px;font-size:11px}
+.dot-table th{background:var(--azul);color:#fff;padding:6px 8px;font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.04em;text-align:center}
+.dot-table th:first-child{text-align:left;min-width:70px}
+.dot-table td{padding:5px 8px;border-bottom:1px solid var(--gris-c);text-align:center;vertical-align:middle}
+.dot-table td:first-child{text-align:left;font-weight:700;color:var(--azul);font-size:12px}
+.dot-table tr:hover td{background:#f9f9ff}
+.dot-bubble{display:inline-flex;align-items:center;justify-content:center;width:26px;height:26px;border-radius:50%;font-size:11px;font-weight:700}
+.db-alto{background:#e1f5ee;color:var(--verde-t)}.db-medio{background:var(--am-c);color:var(--am-t)}
+.db-bajo{background:var(--rojo-c);color:var(--rojo)}.db-cero{background:var(--gris-c);color:var(--gris-m)}
+.dot-names-row td{font-size:10px;color:var(--gris-m);padding:2px 8px 6px;text-align:left!important;background:#fafafa;font-weight:normal!important}
+.dot-filt-btn{padding:4px 10px;font-size:11px;border-radius:20px;cursor:pointer;border:1px solid var(--gris-c);background:#fff;color:var(--gris-m);font-family:var(--font)}
+.dot-filt-btn.active{background:var(--azul);color:#fff;border-color:var(--azul)}
+/* HISTORIAL MALLAS */
+.malla-hist-card{border:1px solid var(--gris-c);border-radius:10px;margin-bottom:10px;overflow:hidden}
+.malla-hist-head{display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:var(--bg);cursor:pointer;border:none;width:100%;font-family:var(--font);text-align:left}
+.malla-hist-head:hover{background:var(--gris-c)}
+.malla-hist-title{font-size:13px;font-weight:700;color:var(--azul)}
+.malla-hist-sub{font-size:11px;color:var(--gris-m);margin-top:1px}
+.malla-hist-body{display:none;padding:1rem;border-top:1px solid var(--gris-c);overflow-x:auto}
+.malla-hist-body.open{display:block}
 .tard-banner{background:var(--am-c);border:1px solid var(--am-t);border-radius:8px;padding:8px 12px;margin-bottom:1rem;font-size:12px;color:var(--am-t);display:none}
 /* DASHBOARD */
 .store-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--gris-c)}
@@ -486,6 +507,21 @@ body{font-family:var(--font);background:var(--bg);min-height:100vh;color:#1a1a2e
         </div>
         <div class="alert-ok" id="m-ok"></div>
       </div>
+      <div class="card" id="dotacion-card" style="display:none">
+        <div class="card-title">Dotación por hora</div>
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px">
+          <div style="font-size:11px;color:var(--gris-m)">Personas activas por hora según los turnos cargados</div>
+          <div style="display:flex;gap:4px;flex-wrap:wrap" id="dot-filtros">
+            <button class="dot-filt-btn active" onclick="filtrarDotacion('todos',this)">Todos</button>
+            <button class="dot-filt-btn" onclick="filtrarDotacion('TC',this)">Solo TC</button>
+            <button class="dot-filt-btn" onclick="filtrarDotacion('MT',this)">Solo MT</button>
+            <button class="dot-filt-btn" onclick="filtrarDotacion('GER',this)">Gerente/Sub</button>
+          </div>
+        </div>
+        <div style="overflow-x:auto" id="dotacion-tabla-wrap">
+          <table class="dot-table" id="dotacion-tabla"></table>
+        </div>
+      </div>
     </div>
 
     <!-- AUSENCIAS -->
@@ -557,6 +593,33 @@ body{font-family:var(--font);background:var(--bg);min-height:100vh;color:#1a1a2e
             <div id="dash-registro-dia"><div style="font-size:12px;color:var(--gris-m)">Cargando registros...</div></div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- HISTORIAL MALLAS DIRECTORA -->
+    <div class="view" id="view-historial-mallas">
+      <div class="card">
+        <div class="card-title">Historial de mallas</div>
+        <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;align-items:flex-end">
+          <div class="fg" style="margin-bottom:0;flex:1;min-width:150px">
+            <label>Tienda</label>
+            <select id="hist-tienda-sel" onchange="cargarHistorialMallas()">
+              <option value="all">Todas las tiendas</option>
+            </select>
+          </div>
+          <div class="fg" style="margin-bottom:0;flex:1;min-width:120px">
+            <label>Estado</label>
+            <select id="hist-estado-sel" onchange="cargarHistorialMallas()">
+              <option value="all">Todos</option>
+              <option value="aprobada">Aprobadas</option>
+              <option value="pendiente">Pendientes</option>
+              <option value="rechazada">Rechazadas</option>
+              <option value="borrador">Borradores</option>
+            </select>
+          </div>
+          <button class="btn-p" style="width:auto;margin-top:0;padding:8px 14px" onclick="cargarHistorialMallas()">Buscar</button>
+        </div>
+        <div id="hist-mallas-list"><div style="font-size:12px;color:var(--gris-m)">Selecciona los filtros y busca.</div></div>
       </div>
     </div>
 
@@ -654,7 +717,7 @@ const AUS_TIPOS={
   lut:{label:'Luto',auto:true,info:'Se activa de inmediato. 5 días primer grado, 3 días segundo grado.'}
 };
 const ROLES={
-  directora:{tabs:['dashboard','reporte'],labels:['📊 Dashboard','📄 Reporte nómina']},
+  directora:{tabs:['dashboard','historial-mallas','reporte'],labels:['📊 Dashboard','📅 Historial mallas','📄 Reporte nómina']},
   gerente:{tabs:['kiosk','equipo','turnos','malla','ausencias'],labels:['🖥 Kiosk','👥 Mi equipo','⏰ Mis turnos','📅 Malla semanal','📋 Ausencias']}
 };
 
@@ -733,6 +796,7 @@ function buildNav(){
       if(t==='turnos'){await loadTurnos();renderTurnos();}
       if(t==='ausencias'){await loadPersonal();loadSelectPersonal();loadAusencias();}
       if(t==='dashboard')loadDashboard();
+      if(t==='historial-mallas'){initHistorialTiendas();cargarHistorialMallas();}
       if(t==='reporte')loadTiendasSelect();
     };
     nav.appendChild(btn);
@@ -1607,7 +1671,291 @@ window.kReset=()=>{
   curEmpId=null;curEmpData=null;curTipo='entrada';
 };
 
-// ── TARDANZAS GERENTE ──
+// ── DOTACIÓN POR HORA ──
+let dotacionFiltro='todos';
+let dotacionData={}; // {hora: {total, ger, tc, mt, nombres}}
+
+function calcularDotacion(){
+  const sels=document.querySelectorAll('.malla-sel');
+  if(sels.length===0)return;
+  dotacionData={};
+  // Rango horario 6am a 11pm
+  for(let h=6;h<=23;h++) dotacionData[h]={total:0,ger:0,tc:0,mt:0,nombres:[]};
+
+  personalCache.forEach(p=>{
+    const esGer=p.cargo==='GERENTE'||p.cargo==='SUBGERENTE';
+    const esMT=p.tipo==='MT'&&!esGer;
+    const esOtrosi=p.otrosiActivo&&p.otrosiHasta&&new Date(p.otrosiHasta)>=new Date();
+    const tipoEfectivo=esOtrosi?'TC':p.tipo;
+
+    // Obtener los selects de esta persona
+    const selsPer=document.querySelectorAll(`.malla-sel[data-ced="${p.id}"]`);
+    selsPer.forEach(sel=>{
+      const val=sel.value;
+      if(['DESCANSO','INCAPACIDAD','VACACIONES','PERMISO'].includes(val))return;
+      const turno=turnosCache.find(t=>t.id===val);
+      if(!turno)return;
+      const hEntrada=parseInt(turno.entrada.split(':')[0]);
+      const hSalida=parseInt(turno.salida.split(':')[0]);
+      const hSalAlm=turno.tieneAlm==='si'?parseInt(turno.salAlm.split(':')[0]):-1;
+      const hRegAlm=turno.tieneAlm==='si'?hSalAlm+Math.ceil(turno.durAlm):-1;
+
+      for(let h=hEntrada;h<hSalida;h++){
+        if(h===hSalAlm)continue; // en almuerzo
+        if(dotacionData[h]){
+          dotacionData[h].total++;
+          if(esGer)dotacionData[h].ger++;
+          else if(tipoEfectivo==='MT')dotacionData[h].mt++;
+          else dotacionData[h].tc++;
+          const nombreCorto=p.nombre.split(' ').slice(0,2).join(' ');
+          if(!dotacionData[h].nombres.includes(nombreCorto))
+            dotacionData[h].nombres.push(nombreCorto);
+        }
+      }
+    });
+  });
+  renderDotacion();
+  document.getElementById('dotacion-card').style.display='block';
+}
+
+function renderDotacion(filtro){
+  filtro=filtro||dotacionFiltro;
+  const tabla=document.getElementById('dotacion-tabla');
+  if(!tabla)return;
+  const maxPersonas=personalCache.length||1;
+
+  let thead='<thead><tr><th>Hora</th>';
+  DIAS.forEach(d=>thead+=`<th>${d}</th>`);
+  thead+='<th>Total sem.</th></tr></thead>';
+
+  // Para cada hora calcular por día
+  // Necesitamos datos por día y hora
+  const sels=document.querySelectorAll('.malla-sel');
+  const porDiaHora={}; // {dia: {hora: {total,ger,tc,mt,nombres}}}
+  for(let d=0;d<7;d++){
+    porDiaHora[d]={};
+    for(let h=6;h<=23;h++) porDiaHora[d][h]={total:0,ger:0,tc:0,mt:0,nombres:[]};
+  }
+
+  personalCache.forEach(p=>{
+    const esGer=p.cargo==='GERENTE'||p.cargo==='SUBGERENTE';
+    const esOtrosi=p.otrosiActivo&&p.otrosiHasta&&new Date(p.otrosiHasta)>=new Date();
+    const tipoEfectivo=esOtrosi?'TC':p.tipo;
+    // Filtro
+    if(filtro==='TC'&&(esGer||tipoEfectivo!=='TC'))return;
+    if(filtro==='MT'&&(esGer||tipoEfectivo!=='MT'))return;
+    if(filtro==='GER'&&!esGer)return;
+
+    for(let col=0;col<7;col++){
+      const sel=document.querySelector(`.malla-sel[data-ced="${p.id}"][data-dia="${col}"]`);
+      if(!sel)continue;
+      const val=sel.value;
+      if(['DESCANSO','INCAPACIDAD','VACACIONES','PERMISO'].includes(val))continue;
+      const turno=turnosCache.find(t=>t.id===val);
+      if(!turno)continue;
+      const hEnt=parseInt(turno.entrada.split(':')[0]);
+      const hSal=parseInt(turno.salida.split(':')[0]);
+      const hAlmSal=turno.tieneAlm==='si'?parseInt(turno.salAlm.split(':')[0]):-1;
+      const nombreCorto=p.nombre.split(' ').slice(0,2).join(' ');
+      for(let h=hEnt;h<hSal;h++){
+        if(h===hAlmSal)continue;
+        if(porDiaHora[col][h]){
+          porDiaHora[col][h].total++;
+          if(esGer)porDiaHora[col][h].ger++;
+          else if(tipoEfectivo==='MT')porDiaHora[col][h].mt++;
+          else porDiaHora[col][h].tc++;
+          if(!porDiaHora[col][h].nombres.includes(nombreCorto))
+            porDiaHora[col][h].nombres.push(nombreCorto);
+        }
+      }
+    }
+  });
+
+  // Determinar rango horario activo
+  let hMin=23,hMax=6;
+  for(let d=0;d<7;d++) for(let h=6;h<=23;h++) if(porDiaHora[d][h].total>0){hMin=Math.min(hMin,h);hMax=Math.max(hMax,h);}
+  if(hMin>hMax){hMin=8;hMax=20;}
+
+  let tbody='<tbody>';
+  for(let h=hMin;h<=hMax;h++){
+    const pad=h<12?`${h}am`:h===12?'12pm':`${h-12}pm`;
+    let rowTotal=0;
+    let celdas='';
+    for(let d=0;d<7;d++){
+      const dato=porDiaHora[d][h];
+      const n=dato.total;
+      rowTotal+=n;
+      const cls=n===0?'db-cero':n>=3?'db-alto':n>=2?'db-medio':'db-bajo';
+      const detalle=filtro==='todos'?`${dato.ger>0?`<span style="font-size:9px;color:var(--az-t)">G:${dato.ger}</span>`:''}${dato.tc>0?`<span style="font-size:9px;color:var(--verde-t)"> TC:${dato.tc}</span>`:''}${dato.mt>0?`<span style="font-size:9px;color:var(--am-t)"> MT:${dato.mt}</span>`:''}`:'' ;
+      celdas+=`<td><div class="dot-bubble ${cls}">${n}</div>${detalle}</td>`;
+    }
+    tbody+=`<tr><td>${pad}</td>${celdas}<td style="font-weight:700;color:var(--azul)">${rowTotal}</td></tr>`;
+  }
+  tbody+='</tbody>';
+  tabla.innerHTML=thead+tbody;
+}
+
+window.filtrarDotacion=(filtro,btn)=>{
+  dotacionFiltro=filtro;
+  document.querySelectorAll('.dot-filt-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  renderDotacion(filtro);
+};
+
+// Llamar calcularDotacion cuando cambia la malla
+const origCalc=window.calcTotalMalla;
+window.calcTotalMalla=()=>{origCalc();calcularDotacion();};
+
+// ── HISTORIAL MALLAS DIRECTORA ──
+async function initHistorialTiendas(){
+  const sel=document.getElementById('hist-tienda-sel');
+  if(!sel||sel.options.length>1)return;
+  TODAS_TIENDAS.forEach(t=>sel.innerHTML+=`<option value="${t}">${t}</option>`);
+}
+
+window.cargarHistorialMallas=async()=>{
+  const tienda=document.getElementById('hist-tienda-sel').value;
+  const estado=document.getElementById('hist-estado-sel').value;
+  const list=document.getElementById('hist-mallas-list');
+  list.innerHTML='<div style="font-size:12px;color:var(--gris-m)">Buscando...</div>';
+
+  let q;
+  const condiciones=[];
+  if(tienda!=='all')condiciones.push(where('tienda','==',tienda));
+  if(estado!=='all')condiciones.push(where('estado','==',estado));
+  q=query(collection(db,'mallas'),...condiciones);
+
+  const snaps=await getDocs(q);
+  list.innerHTML='';
+  if(snaps.empty){list.innerHTML='<div style="font-size:12px;color:var(--gris-m)">Sin mallas para los filtros seleccionados.</div>';return;}
+
+  // Ordenar por semana desc
+  const mallas=[];
+  snaps.forEach(d=>mallas.push({id:d.id,...d.data()}));
+  mallas.sort((a,b)=>b.semana?.localeCompare(a.semana||'')||0);
+
+  for(const m of mallas){
+    // Obtener personal de esa tienda para mostrar nombres
+    const qp=query(collection(db,'personal'),where('tienda','==',m.tienda));
+    const snapP=await getDocs(qp);
+    const personal={};snapP.forEach(d=>personal[d.id]={...d.data(),id:d.id});
+    // Obtener turnos maestros
+    const qt=query(collection(db,'turnos-maestros'),where('tienda','==',m.tienda));
+    const snapT=await getDocs(qt);
+    const turnos={};snapT.forEach(d=>turnos[d.id]={...d.data()});
+
+    const estadoPill=m.estado==='aprobada'?'p-ok':m.estado==='rechazada'?'p-rej':m.estado==='borrador'?'p-auto':'p-pend';
+    const estadoLabel=m.estado==='aprobada'?'Aprobada':m.estado==='rechazada'?'Rechazada':m.estado==='borrador'?'Borrador':'Pendiente';
+
+    const card=document.createElement('div');card.className='malla-hist-card';
+    const headId=`hist-head-${m.id}`;const bodyId=`hist-body-${m.id}`;
+
+    // Construir tabla de la malla
+    let tablaHtml=`<table class="malla-table"><thead><tr>
+      <th style="width:18%;text-align:left;padding-left:8px">Persona</th>
+      <th style="width:8%">Cargo</th>
+      ${DIAS.map(d=>`<th>${d}</th>`).join('')}
+      <th>Total h</th>
+    </tr></thead><tbody>`;
+
+    Object.entries(m.data||{}).forEach(([empId,dias])=>{
+      const p=personal[empId];
+      if(!p)return;
+      const esGer=p.cargo==='GERENTE'||p.cargo==='SUBGERENTE';
+      const maxH=esGer?999:p.tipo==='MT'?21:42;
+      let hTot=0;
+      const celdas=DIAS.map((_,col)=>{
+        const val=dias[col]||'DESCANSO';
+        const t=turnos[val];
+        const diaDescanso=getDiaDescanso(m.tienda,p.cargo);
+        const jsDay=colToJsDay(col);
+        const esDom=diaDescanso!==null&&jsDay===diaDescanso&&!['DESCANSO','INCAPACIDAD','VACACIONES','PERMISO'].includes(val);
+        if(t&&!['DESCANSO','INCAPACIDAD','VACACIONES','PERMISO'].includes(val))hTot+=t.horas;
+        const bg=val==='DESCANSO'?'var(--am-c)':['INCAPACIDAD','VACACIONES','PERMISO'].includes(val)?'var(--az-c)':esDom?'#fff0f0':'#f0fff8';
+        const color=val==='DESCANSO'?'var(--am-t)':['INCAPACIDAD','VACACIONES','PERMISO'].includes(val)?'var(--az-t)':esDom?'#8b0000':'var(--verde-t)';
+        const label=val==='DESCANSO'?'DESC':['INCAPACIDAD','VACACIONES','PERMISO'].includes(val)?val.substring(0,3):t?.nombre?.substring(0,8)||val.substring(0,6);
+        return `<td style="text-align:center;background:${bg};color:${color};font-size:9px;font-weight:500;padding:3px 1px">${label}</td>`;
+      }).join('');
+      const ot=!esGer?Math.max(0,Math.round((hTot-maxH)*10)/10):0;
+      tablaHtml+=`<tr><td style="padding-left:8px;font-size:11px;font-weight:500">${p.nombre.split(' ').slice(0,2).join(' ')}</td><td style="font-size:10px;color:var(--gris-m);text-align:center">${p.cargo}</td>${celdas}<td style="text-align:center;font-weight:700;font-size:11px;color:${ot>0?'var(--rojo)':'var(--verde-t)'}">${hTot}h${ot>0?` <span style="font-size:9px">+${ot}h</span>`:''}</td></tr>`;
+    });
+    tablaHtml+='</tbody></table>';
+    if(m.motivoRechazo) tablaHtml+=`<div style="margin-top:8px;font-size:11px;padding:7px 10px;border-radius:7px;background:var(--rojo-c);color:var(--rojo)">Motivo de rechazo: ${m.motivoRechazo}</div>`;
+
+    const cantPersonas=Object.keys(m.data||{}).length;
+    card.innerHTML=`
+      <button class="malla-hist-head" onclick="toggleHistBody('${bodyId}','${headId}')">
+        <div>
+          <div class="malla-hist-title">${m.tienda} · Semana del ${m.semana}</div>
+          <div class="malla-hist-sub">${cantPersonas} persona(s) · <span class="pill ${estadoPill}">${estadoLabel}</span></div>
+        </div>
+        <span id="${headId}" style="font-size:14px;color:var(--gris-m)">▼</span>
+      </button>
+      <div class="malla-hist-body" id="${bodyId}">${tablaHtml}</div>`;
+    list.appendChild(card);
+  }
+};
+
+function generarTablaDotModal(data,personal,turnos,filtro){
+  const porDiaHora={};
+  for(let d=0;d<7;d++){porDiaHora[d]={};for(let h=6;h<=23;h++)porDiaHora[d][h]={total:0,ger:0,tc:0,mt:0};}
+  Object.entries(data).forEach(([empId,dias])=>{
+    const p=personal[empId];if(!p)return;
+    const esGer=p.cargo==='GERENTE'||p.cargo==='SUBGERENTE';
+    const tipoEf=p.tipo;
+    if(filtro==='TC'&&(esGer||tipoEf!=='TC'))return;
+    if(filtro==='MT'&&(esGer||tipoEf!=='MT'))return;
+    if(filtro==='GER'&&!esGer)return;
+    for(let col=0;col<7;col++){
+      const val=dias[col]||'DESCANSO';
+      if(['DESCANSO','INCAPACIDAD','VACACIONES','PERMISO'].includes(val))continue;
+      const t=turnos[val];if(!t)continue;
+      const hEnt=parseInt(t.entrada.split(':')[0]);
+      const hSal=parseInt(t.salida.split(':')[0]);
+      const hAlm=t.tieneAlm==='si'?parseInt(t.salAlm.split(':')[0]):-1;
+      for(let h=hEnt;h<hSal;h++){
+        if(h===hAlm)continue;
+        if(porDiaHora[col][h]){
+          porDiaHora[col][h].total++;
+          if(esGer)porDiaHora[col][h].ger++;
+          else if(tipoEf==='MT')porDiaHora[col][h].mt++;
+          else porDiaHora[col][h].tc++;
+        }
+      }
+    }
+  });
+  let hMin=23,hMax=6;
+  for(let d=0;d<7;d++)for(let h=6;h<=23;h++)if(porDiaHora[d][h].total>0){hMin=Math.min(hMin,h);hMax=Math.max(hMax,h);}
+  if(hMin>hMax){hMin=8;hMax=18;}
+  let html=`<table class="dot-table"><thead><tr><th>Hora</th>${DIAS.map(d=>`<th>${d}</th>`).join('')}<th>Sem</th></tr></thead><tbody>`;
+  for(let h=hMin;h<=hMax;h++){
+    const pad=h<12?`${h}am`:h===12?'12pm':`${h-12}pm`;
+    let rowTot=0;
+    let celdas='';
+    for(let d=0;d<7;d++){
+      const dato=porDiaHora[d][h];const n=dato.total;rowTot+=n;
+      const cls=n===0?'db-cero':n>=3?'db-alto':n>=2?'db-medio':'db-bajo';
+      const det=filtro==='todos'?`<div style="font-size:9px;color:var(--gris-m)">${dato.ger>0?`G:${dato.ger} `:''}${dato.tc>0?`TC:${dato.tc} `:''}${dato.mt>0?`MT:${dato.mt}`:''}</div>`:'';
+      celdas+=`<td><div class="dot-bubble ${cls}">${n}</div>${det}</td>`;
+    }
+    html+=`<tr><td>${pad}</td>${celdas}<td style="font-weight:700;color:var(--azul)">${rowTot}</td></tr>`;
+  }
+  return html+'</tbody></table>';
+}
+
+window.filtrarDotModal=(filtro,btn,mallaId)=>{
+  btn.closest('div').querySelectorAll('.dot-filt-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const wrap=document.getElementById(`dot-modal-wrap-${mallaId}`);
+  if(wrap&&window._modalData&&window._modalPersonal&&window._modalTurnos){
+    wrap.innerHTML=generarTablaDotModal(window._modalData,window._modalPersonal,window._modalTurnos,filtro);
+  }
+};
+  const body=document.getElementById(bodyId);
+  const chev=document.getElementById(chevId);
+  body.classList.toggle('open');
+  if(chev)chev.textContent=body.classList.contains('open')?'▲':'▼';
+};
 async function cargarTardanzasHoy(){
   const banner=document.getElementById('tard-banner');
   if(!banner)return;
@@ -1790,15 +2138,16 @@ window.abrirModal=async(id,card)=>{
   document.getElementById('modal-malla-title').textContent=`${m.tienda} · Semana del ${m.semana}`;
   // Construir tabla detalle
   const data=m.data||{};
+  window._modalData=data;
   const tienda=m.tienda;
-  // Obtener personal de esa tienda
-  const qp=query(collection(db,'personal'),where('tienda','==',tienda),where('activo','==',true));
   const snapP=await getDocs(qp);
   const personal={};snapP.forEach(d=>personal[d.id]={...d.data(),id:d.id});
+  window._modalPersonal=personal;
   // Obtener turnos maestros de esa tienda
   const qt=query(collection(db,'turnos-maestros'),where('tienda','==',tienda));
   const snapT=await getDocs(qt);
   const turnos={};snapT.forEach(d=>turnos[d.id]={...d.data(),id:d.id});
+  window._modalTurnos=turnos;
   turnos['DESCANSO']={nombre:'DESCANSO',horas:0};
   turnos['INCAPACIDAD']={nombre:'INCAPACIDAD',horas:0};
   turnos['VACACIONES']={nombre:'VACACIONES',horas:0};
@@ -1833,6 +2182,9 @@ window.abrirModal=async(id,card)=>{
   });
   html+='</tbody></table></div>';
   html+=`<div style="margin-top:8px;font-size:11px;color:var(--gris-m)">🟡 Descanso &nbsp; 🔵 Ausencia &nbsp; 🔴 Trabaja en día de descanso asignado (recargo dominical) &nbsp; 🟢 Turno normal</div>`;
+
+  // Dotación por hora en el modal
+  html+=`<div style="margin-top:1rem"><div style="font-size:12px;font-weight:700;color:var(--azul);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between"><span>Dotación por hora</span><div style="display:flex;gap:4px"><button class="dot-filt-btn active" onclick="filtrarDotModal('todos',this,'${m.id}',personal,turnos)">Todos</button><button class="dot-filt-btn" onclick="filtrarDotModal('TC',this,'${m.id}',personal,turnos)">TC</button><button class="dot-filt-btn" onclick="filtrarDotModal('MT',this,'${m.id}',personal,turnos)">MT</button><button class="dot-filt-btn" onclick="filtrarDotModal('GER',this,'${m.id}',personal,turnos)">Ger/Sub</button></div></div><div style="overflow-x:auto" id="dot-modal-wrap-${m.id}">${generarTablaDotModal(data,personal,turnos,'todos')}</div></div>`;
   document.getElementById('modal-malla-body').innerHTML=html;
   // Reset botones
   document.getElementById('rechazo-form').style.display='none';
