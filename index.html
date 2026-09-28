@@ -938,6 +938,8 @@ window.reactivar=async(id,nombre)=>{
   await updateDoc(doc(db,'personal',id),{activo:true,fechaDesactivacion:null});
   await loadPersonal();
 };
+
+window.desactivar=async(id,nombre)=>{
   if(!confirm(`¿Desactivar a ${nombre}?\n\nDejará de aparecer en el kiosk y las mallas futuras.\nSus registros históricos se conservan hasta que confirmes la eliminación.`))return;
   await updateDoc(doc(db,'personal',id),{activo:false,fechaDesactivacion:new Date().toISOString()});
   await loadPersonal();
@@ -1951,6 +1953,8 @@ window.filtrarDotModal=(filtro,btn,mallaId)=>{
     wrap.innerHTML=generarTablaDotModal(window._modalData,window._modalPersonal,window._modalTurnos,filtro);
   }
 };
+
+window.toggleHistBody=(bodyId,chevId)=>{
   const body=document.getElementById(bodyId);
   const chev=document.getElementById(chevId);
   body.classList.toggle('open');
