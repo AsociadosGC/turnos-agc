@@ -1884,6 +1884,21 @@ window.cargarHistorialMallas=async()=>{
     tablaHtml+='</tbody></table>';
     if(m.motivoRechazo) tablaHtml+=`<div style="margin-top:8px;font-size:11px;padding:7px 10px;border-radius:7px;background:var(--rojo-c);color:var(--rojo)">Motivo de rechazo: ${m.motivoRechazo}</div>`;
 
+    // Dotación por hora en historial
+    const dotId=`dot-hist-${m.id}`;
+    tablaHtml+=`<div style="margin-top:1rem">
+      <div style="font-size:12px;font-weight:700;color:var(--azul);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">
+        <span>Dotación por hora</span>
+        <div style="display:flex;gap:4px">
+          <button class="dot-filt-btn active" onclick="filtrarDotHist('todos',this,'${dotId}',${JSON.stringify(m.data||{}).replace(/'/g,"&#39;")})">Todos</button>
+          <button class="dot-filt-btn" onclick="filtrarDotHist('TC',this,'${dotId}',null)">TC</button>
+          <button class="dot-filt-btn" onclick="filtrarDotHist('MT',this,'${dotId}',null)">MT</button>
+          <button class="dot-filt-btn" onclick="filtrarDotHist('GER',this,'${dotId}',null)">Ger/Sub</button>
+        </div>
+      </div>
+      <div style="overflow-x:auto" id="${dotId}">${generarTablaDotModal(m.data||{},personal,turnos,'todos')}</div>
+    </div>`;
+
     const cantPersonas=Object.keys(m.data||{}).length;
     card.innerHTML=`
       <button class="malla-hist-head" onclick="toggleHistBody('${bodyId}','${headId}')">
@@ -1952,6 +1967,19 @@ window.filtrarDotModal=(filtro,btn,mallaId)=>{
   if(wrap&&window._modalData&&window._modalPersonal&&window._modalTurnos){
     wrap.innerHTML=generarTablaDotModal(window._modalData,window._modalPersonal,window._modalTurnos,filtro);
   }
+};
+
+// Cache de datos por malla para filtros en historial
+window._histCache={};
+
+window.filtrarDotHist=(filtro,btn,dotId,dataInit)=>{
+  btn.closest('div').querySelectorAll('.dot-filt-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  // Si viene dataInit (primer clic = todos) guardamos el cache
+  if(dataInit) window._histCache[dotId]={data:dataInit,personal:window._modalPersonal,turnos:window._modalTurnos};
+  const cache=window._histCache[dotId];
+  const wrap=document.getElementById(dotId);
+  if(wrap&&cache) wrap.innerHTML=generarTablaDotModal(cache.data,cache.personal,cache.turnos,filtro);
 };
 
 window.toggleHistBody=(bodyId,chevId)=>{
@@ -2137,25 +2165,32 @@ let modalMallaId=null, modalMallaCard=null;
 
 window.abrirModal=async(id,card)=>{
   modalMallaId=id;modalMallaCard=card;
+  document.getElementById('modal-malla-body').innerHTML='<div style="font-size:12px;color:var(--gris-m);padding:1rem">Cargando detalle...</div>';
+  document.getElementById('modal-malla').classList.add('open');
+
   const snap=await getDoc(doc(db,'mallas',id));
   const m=snap.data();
   document.getElementById('modal-malla-title').textContent=`${m.tienda} · Semana del ${m.semana}`;
-  // Construir tabla detalle
+
   const data=m.data||{};
   window._modalData=data;
   const tienda=m.tienda;
+
+  // Obtener personal de esa tienda
+  const qp=query(collection(db,'personal'),where('tienda','==',tienda));
   const snapP=await getDocs(qp);
   const personal={};snapP.forEach(d=>personal[d.id]={...d.data(),id:d.id});
   window._modalPersonal=personal;
+
   // Obtener turnos maestros de esa tienda
   const qt=query(collection(db,'turnos-maestros'),where('tienda','==',tienda));
   const snapT=await getDocs(qt);
   const turnos={};snapT.forEach(d=>turnos[d.id]={...d.data(),id:d.id});
-  window._modalTurnos=turnos;
   turnos['DESCANSO']={nombre:'DESCANSO',horas:0};
   turnos['INCAPACIDAD']={nombre:'INCAPACIDAD',horas:0};
   turnos['VACACIONES']={nombre:'VACACIONES',horas:0};
   turnos['PERMISO']={nombre:'PERMISO',horas:0};
+  window._modalTurnos=turnos;
 
   let html=`<div style="overflow-x:auto"><table class="malla-table"><thead><tr>
     <th style="width:18%;text-align:left;padding-left:8px">Persona</th>
