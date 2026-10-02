@@ -491,7 +491,7 @@ body{font-family:var(--font);background:var(--bg);min-height:100vh;color:#1a1a2e
         <div id="malla-aviso" style="display:none;margin-bottom:1rem"></div>
         <div style="overflow-x:auto">
           <table class="malla-table" id="malla-tabla">
-            <thead><tr>
+            <thead><tr id="malla-thead-row">
               <th style="width:16%">Persona</th>
               <th style="width:7%">Lun</th><th style="width:7%">Mar</th><th style="width:7%">Mié</th>
               <th style="width:7%">Jue</th><th style="width:7%">Vie</th><th style="width:7%">Sáb</th><th style="width:7%">Dom</th>
@@ -508,6 +508,10 @@ body{font-family:var(--font);background:var(--bg);min-height:100vh;color:#1a1a2e
           <button class="btn-s" onclick="guardarBorrador()">Guardar borrador</button>
         </div>
         <div class="alert-ok" id="m-ok"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">Mallas guardadas</div>
+        <div id="mallas-guardadas-list"><div style="font-size:12px;color:var(--gris-m)">Cargando...</div></div>
       </div>
       <div class="card" id="dotacion-card" style="display:none">
         <div class="card-title">Dotación por hora</div>
@@ -555,6 +559,47 @@ body{font-family:var(--font);background:var(--bg);min-height:100vh;color:#1a1a2e
           <div class="card-title">Ausencias del mes</div>
           <div id="aus-list"><div style="font-size:12px;color:var(--gris-m)">Sin ausencias registradas.</div></div>
         </div>
+      </div>
+    </div>
+
+    <!-- REGISTROS GERENTE -->
+    <div class="view" id="view-registros">
+      <div class="card">
+        <div class="card-title">Registros de mi tienda</div>
+        <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;align-items:flex-end">
+          <div class="fg" style="margin-bottom:0;flex:1;min-width:140px">
+            <label>Fecha</label>
+            <input type="date" id="reg-fecha">
+          </div>
+          <button class="btn-p" style="width:auto;margin-top:0;padding:8px 14px" onclick="cargarRegistrosGerente()">Buscar</button>
+          <button class="btn-s" style="padding:8px 14px" onclick="exportarRegistrosGerente()">📥 Exportar</button>
+        </div>
+        <div id="reg-gerente-resumen" style="display:none;margin-bottom:10px"></div>
+        <div style="overflow-x:auto">
+          <table class="rep-table" id="reg-gerente-tabla">
+            <thead><tr>
+              <th style="width:20%">Persona</th>
+              <th style="width:10%">Cargo</th>
+              <th class="tc" style="width:12%">Entrada</th>
+              <th class="tc" style="width:12%">Sal. alm.</th>
+              <th class="tc" style="width:12%">Reg. alm.</th>
+              <th class="tc" style="width:12%">Salida</th>
+              <th class="tc" style="width:12%">Estado</th>
+              <th class="tc" style="width:10%">Tardanza</th>
+            </tr></thead>
+            <tbody id="reg-gerente-body">
+              <tr><td colspan="8" style="text-align:center;padding:1.5rem;color:var(--gris-m);font-size:12px">Selecciona una fecha y busca.</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- NOTIFICACIONES GERENTE -->
+    <div class="view" id="view-notificaciones">
+      <div class="card">
+        <div class="card-title">Notificaciones</div>
+        <div id="notif-list"><div style="font-size:12px;color:var(--gris-m)">Cargando...</div></div>
       </div>
     </div>
 
@@ -729,7 +774,7 @@ const AUS_TIPOS={
 };
 const ROLES={
   directora:{tabs:['dashboard','historial-mallas','reporte'],labels:['📊 Dashboard','📅 Historial mallas','📄 Reporte nómina']},
-  gerente:{tabs:['kiosk','equipo','turnos','malla','ausencias'],labels:['🖥 Kiosk','👥 Mi equipo','⏰ Mis turnos','📅 Malla semanal','📋 Ausencias']},
+  gerente:{tabs:['kiosk','equipo','turnos','malla','ausencias','registros','notificaciones'],labels:['🖥 Kiosk','👥 Mi equipo','⏰ Mis turnos','📅 Malla semanal','📋 Ausencias','📋 Registros','🔔 Notificaciones']},
   consulta:{tabs:['historial-mallas'],labels:['📅 Historial mallas']}
 };
 
@@ -790,7 +835,7 @@ onAuthStateChanged(auth,async user=>{
   buildNav();
   if(curRole==='directora'){show('dashboard');loadDashboard();}
   else if(curRole==='consulta'){show('historial-mallas');initHistorialTiendas();cargarHistorialMallas();}
-  else{show('kiosk');await loadPersonal();await loadTurnos();cargarAvisosRechazo();
+  else{show('kiosk');await loadPersonal();await loadTurnos();cargarAvisosRechazo();cargarMallasGuardadas();
     // Verificar GPS al arrancar
     validarGPS().then(r=>{
       const dot=document.getElementById('k-gpsdot');
@@ -814,6 +859,13 @@ function buildNav(){
       btn.classList.add('active');show(t);
       if(t==='kiosk')cargarTardanzasHoy();
       if(t==='equipo'){await loadPersonal();renderEquipoList();loadSelectOtrosi();}
+      if(t==='registros'){
+        const hoy=new Date().toISOString().split('T')[0];
+        document.getElementById('reg-fecha').value=hoy;
+        cargarRegistrosGerente();
+      }
+      if(t==='notificaciones')cargarNotificaciones();
+      if(t==='malla')cargarMallasGuardadas();
       if(t==='turnos'){await loadTurnos();renderTurnos();}
       if(t==='ausencias'){await loadPersonal();loadSelectPersonal();loadAusencias();}
       if(t==='dashboard')loadDashboard();
@@ -1120,13 +1172,15 @@ window.eliminarTurno=async id=>{
 };
 
 // ── MALLA ──
-window.generarMalla=async()=>{
+let mallaEditandoId=null; // ID de malla existente que se está editando
+
+window.generarMalla=async(mallaIdEditar=null)=>{
   await loadPersonal();await loadTurnos();
   const semana=document.getElementById('m-semana').value;
   if(!semana){alert('Selecciona la semana');return;}
   const dow=new Date(semana+'T12:00:00').getDay();
   const aviso=document.getElementById('malla-aviso');
-  if(dow!==4){
+  if(dow!==4&&!mallaIdEditar){
     aviso.innerHTML='<div class="alert-warn">⚠ La malla solo puede cargarse los jueves. La fecha seleccionada no es jueves.</div>';
     aviso.style.display='block';return;
   }
@@ -1136,7 +1190,37 @@ window.generarMalla=async()=>{
     aviso.style.display='block';return;
   }
 
-  // Opciones del select
+  // Calcular fechas de cada día de la semana
+  const semDate=new Date(semana+'T12:00:00');
+  const lunes=new Date(semDate);
+  lunes.setDate(semDate.getDate()-((semDate.getDay()+6)%7));
+  const fechasDias=[];
+  const diasAbrev=['Lun','Mar','Mié','Jue','Vie','Sáb','Dom'];
+  for(let i=0;i<7;i++){
+    const d=new Date(lunes);d.setDate(lunes.getDate()+i);
+    const dd=String(d.getDate()).padStart(2,'0');
+    const mm=String(d.getMonth()+1).padStart(2,'0');
+    fechasDias.push(`${diasAbrev[i]}<br><span style="font-size:9px;font-weight:400">${dd}/${mm}</span>`);
+  }
+
+  // Actualizar encabezados con fechas
+  const thead=document.getElementById('malla-thead-row');
+  if(thead){
+    thead.innerHTML=`<th style="width:16%">Persona</th>
+      ${fechasDias.map(f=>`<th style="width:7%">${f}</th>`).join('')}
+      <th style="width:6%">Total h</th><th style="width:6%">OT/Límite</th>`;
+  }
+
+  // Cargar datos de malla existente si estamos editando
+  let dataMallaExistente={};
+  mallaEditandoId=mallaIdEditar;
+  if(mallaIdEditar){
+    const snapM=await getDoc(doc(db,'mallas',mallaIdEditar));
+    if(snapM.exists()) dataMallaExistente=snapM.data().data||{};
+    aviso.innerHTML=`<div class="alert-warn" style="background:var(--az-c);color:var(--az-t)">✏ Modo edición — estás modificando una malla existente. Guarda los cambios cuando termines.</div>`;
+    aviso.style.display='block';
+  }
+
   const optsEspeciales=[
     '<option value="DESCANSO">DESCANSO</option>',
     '<option value="INCAPACIDAD">INCAPACIDAD</option>',
@@ -1144,45 +1228,39 @@ window.generarMalla=async()=>{
     '<option value="PERMISO">PERMISO</option>',
   ].join('');
   const optsTurnos=turnosCache.map(t=>`<option value="${t.id}">${t.nombre} (${t.horas}h)</option>`).join('');
-
   const tbody=document.getElementById('malla-body');tbody.innerHTML='';
 
-  // Info de dominicales
+  // Info dominicales
   const diasNombres=['Dom','Lun','Mar','Mié','Jue','Vie','Sáb'];
-  let dominicalInfo='Días de descanso asignados (trabajarlos = recargo dominical): ';
   const infos=[];
-  const cargos=['GERENTE','SUBGERENTE','ASESOR'];
-  cargos.forEach(c=>{
+  ['GERENTE','SUBGERENTE','ASESOR'].forEach(c=>{
     const d=DESCANSOS[curTienda]?.[c];
     if(d!==undefined)infos.push(`${c}: ${diasNombres[d]}`);
   });
-  dominicalInfo+=infos.join(' · ');
   const domEl=document.getElementById('m-dominical-info');
-  domEl.textContent=dominicalInfo;domEl.style.display='block';
+  domEl.textContent='Días de descanso asignados (trabajarlos = recargo dominical): '+infos.join(' · ');
+  domEl.style.display='block';
 
   personalCache.forEach(p=>{
-    const diaDescanso=getDiaDescanso(curTienda,p.cargo); // día JS
+    const diaDescanso=getDiaDescanso(curTienda,p.cargo);
     const tr=document.createElement('tr');
     const nombreCorto=p.nombre.split(' ').slice(0,2).join(' ');
-    // Verificar otrosí activo
     const esOtrosi=p.otrosiActivo&&p.otrosiHasta&&new Date(p.otrosiHasta)>=new Date(semana);
     const tipoEfectivo=esOtrosi?'TC':p.tipo;
     let cells=`<td title="${p.nombre} · CC ${p.cedula||p.id}">${nombreCorto}<br><span style="font-size:9px;color:var(--gris-m)">${p.cargo}·${tipoEfectivo}</span></td>`;
     DIAS.forEach((_,col)=>{
-      const jsDay=colToJsDay(col);
-      const esDiaDescanso=jsDay===diaDescanso;
-      const defaultVal=esDiaDescanso?'DESCANSO':turnosCache[0]?.id||'DESCANSO';
       cells+=`<td><select class="malla-sel" data-ced="${p.id}" data-dia="${col}" data-tipo="${tipoEfectivo}" data-descanso="${diaDescanso}" onchange="onMallaChange(this)">${optsEspeciales}${optsTurnos}</select></td>`;
     });
     cells+=`<td class="tc" id="total-${p.id}" style="font-weight:700;color:var(--azul)">0h</td>`;
     cells+=`<td class="tc" id="ot-${p.id}" style="font-size:10px;color:var(--gris-m)">—</td>`;
     tr.innerHTML=cells;tbody.appendChild(tr);
 
-    // Poner valores por defecto y colorear
     tr.querySelectorAll('.malla-sel').forEach((sel,col)=>{
       const jsDay=colToJsDay(col);
       const esDiaDescanso=jsDay===diaDescanso;
-      sel.value=esDiaDescanso?'DESCANSO':turnosCache[0]?.id||'DESCANSO';
+      // Si hay datos existentes de edición, usarlos; si no, valores por defecto
+      const valExistente=dataMallaExistente[p.id]?.[col];
+      sel.value=valExistente||(esDiaDescanso?'DESCANSO':turnosCache[0]?.id||'DESCANSO');
       colorSelect(sel,diaDescanso,col);
     });
   });
@@ -1248,8 +1326,15 @@ window.enviarMalla=async()=>{
   if(!semana||sels.length===0){alert('Genera primero la malla');return;}
   const data={};
   sels.forEach(sel=>{if(!data[sel.dataset.ced])data[sel.dataset.ced]={};data[sel.dataset.ced][sel.dataset.dia]=sel.value;});
-  await addDoc(collection(db,'mallas'),{tienda:curTienda,semana,data,estado:'pendiente',creadoPor:curUser.uid,timestamp:serverTimestamp()});
-  showOk('m-ok','✓ Malla enviada a la Directora de Operaciones para aprobación.');
+  if(mallaEditandoId){
+    await updateDoc(doc(db,'mallas',mallaEditandoId),{data,estado:'pendiente',timestamp:serverTimestamp()});
+    showOk('m-ok','✓ Malla actualizada y enviada a la Directora para aprobación.');
+  }else{
+    await addDoc(collection(db,'mallas'),{tienda:curTienda,semana,data,estado:'pendiente',creadoPor:curUser.uid,timestamp:serverTimestamp()});
+    showOk('m-ok','✓ Malla enviada a la Directora de Operaciones para aprobación.');
+  }
+  mallaEditandoId=null;
+  cargarMallasGuardadas();
 };
 
 window.guardarBorrador=async()=>{
@@ -1258,8 +1343,14 @@ window.guardarBorrador=async()=>{
   if(!semana||sels.length===0){alert('Genera primero la malla');return;}
   const data={};
   sels.forEach(sel=>{if(!data[sel.dataset.ced])data[sel.dataset.ced]={};data[sel.dataset.ced][sel.dataset.dia]=sel.value;});
-  await addDoc(collection(db,'mallas'),{tienda:curTienda,semana,data,estado:'borrador',creadoPor:curUser.uid,timestamp:serverTimestamp()});
-  showOk('m-ok','✓ Borrador guardado. Envía para aprobación el jueves.');
+  if(mallaEditandoId){
+    await updateDoc(doc(db,'mallas',mallaEditandoId),{data,timestamp:serverTimestamp()});
+    showOk('m-ok','✓ Cambios guardados en el borrador.');
+  }else{
+    await addDoc(collection(db,'mallas'),{tienda:curTienda,semana,data,estado:'borrador',creadoPor:curUser.uid,timestamp:serverTimestamp()});
+    showOk('m-ok','✓ Borrador guardado. Envía para aprobación el jueves.');
+  }
+  cargarMallasGuardadas();
 };
 
 // ── AUSENCIAS ──
@@ -2189,6 +2280,143 @@ window.toggleHistBody=(bodyId,chevId)=>{
   body.classList.toggle('open');
   if(chev)chev.textContent=body.classList.contains('open')?'▲':'▼';
 };
+// ── MALLAS GUARDADAS ──
+async function cargarMallasGuardadas(){
+  const list=document.getElementById('mallas-guardadas-list');
+  if(!list)return;
+  const q=query(collection(db,'mallas'),where('tienda','==',curTienda));
+  const snaps=await getDocs(q);
+  const mallas=[];
+  snaps.forEach(d=>mallas.push({id:d.id,...d.data()}));
+  mallas.sort((a,b)=>b.semana?.localeCompare(a.semana||'')||0);
+  if(mallas.length===0){list.innerHTML='<div style="font-size:12px;color:var(--gris-m)">Sin mallas guardadas.</div>';return;}
+  list.innerHTML='';
+  mallas.forEach(m=>{
+    const estadoPill=m.estado==='aprobada'?'p-ok':m.estado==='rechazada'?'p-rej':m.estado==='borrador'?'p-auto':'p-pend';
+    const estadoLabel=m.estado==='aprobada'?'Aprobada':m.estado==='rechazada'?'Rechazada':m.estado==='borrador'?'Borrador':'Pendiente';
+    const row=document.createElement('div');row.className='appr-card';
+    row.innerHTML=`
+      <div class="appr-head">
+        <div>
+          <div class="appr-name">Semana del ${m.semana}</div>
+          <div class="appr-detail">${Object.keys(m.data||{}).length} persona(s) · <span class="pill ${estadoPill}">${estadoLabel}</span>${m.motivoRechazo?`<br><span style="color:var(--rojo);font-size:10px">Motivo: ${m.motivoRechazo}</span>`:''}</div>
+        </div>
+        <button class="btn-s" style="padding:4px 10px;font-size:11px" onclick="editarMalla('${m.id}','${m.semana}')">✏ Editar</button>
+      </div>`;
+    list.appendChild(row);
+  });
+}
+
+window.editarMalla=async(mallaId,semana)=>{
+  document.getElementById('m-semana').value=semana;
+  await generarMalla(mallaId);
+  // Scroll hasta la tabla
+  document.getElementById('malla-tabla').scrollIntoView({behavior:'smooth'});
+};
+
+// ── NOTIFICACIONES GERENTE ──
+async function cargarNotificaciones(){
+  const list=document.getElementById('notif-list');
+  if(!list)return;
+  const q=query(collection(db,'notificaciones'),where('tienda','==',curTienda));
+  const snaps=await getDocs(q);
+  const notifs=[];
+  snaps.forEach(d=>notifs.push({id:d.id,...d.data()}));
+  notifs.sort((a,b)=>b.fecha?.localeCompare(a.fecha||'')||0);
+  if(notifs.length===0){list.innerHTML='<div style="font-size:12px;color:var(--gris-m)">Sin notificaciones.</div>';return;}
+  list.innerHTML='';
+  for(const n of notifs){
+    const esAprobada=n.tipo==='aprobacion';
+    const fecha=n.fecha?new Date(n.fecha).toLocaleDateString('es-CO',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}):'';
+    const div=document.createElement('div');
+    div.className='appr-card';
+    div.style.borderLeft=`4px solid ${esAprobada?'var(--verde)':'var(--rojo)'}`;
+    div.style.opacity=n.leida?'0.6':'1';
+    div.innerHTML=`
+      <div class="appr-head">
+        <div>
+          <div class="appr-name" style="color:${esAprobada?'var(--verde-t)':'var(--rojo)'}">${esAprobada?'✓ Malla aprobada':'✗ Malla rechazada'}</div>
+          <div class="appr-detail">${n.mensaje}<br><span style="font-size:10px;color:var(--gris-m)">${fecha}</span></div>
+        </div>
+        ${!n.leida?`<button class="btn-deact" onclick="marcarLeida('${n.id}',this)">Marcar leída</button>`:'<span style="font-size:10px;color:var(--gris-m)">Leída</span>'}
+      </div>`;
+    list.appendChild(div);
+    // Marcar como leída automáticamente al ver
+    if(!n.leida) updateDoc(doc(db,'notificaciones',n.id),{leida:true});
+  }
+}
+
+window.marcarLeida=async(id,btn)=>{
+  await updateDoc(doc(db,'notificaciones',id),{leida:true});
+  btn.closest('.appr-card').style.opacity='0.6';
+  btn.replaceWith(document.createTextNode('Leída'));
+};
+
+// ── REGISTROS GERENTE ──
+window.cargarRegistrosGerente=async()=>{
+  const fecha=document.getElementById('reg-fecha').value;
+  if(!fecha){alert('Selecciona una fecha');return;}
+  const tbody=document.getElementById('reg-gerente-body');
+  tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:1rem;color:var(--gris-m);font-size:12px">Cargando...</td></tr>';
+  const q=query(collection(db,'registros'),where('tienda','==',curTienda),where('fecha','==',fecha));
+  const snaps=await getDocs(q);
+  const porPersona={};
+  snaps.forEach(d=>{
+    const r=d.data();const k=r.cedula||r.nombre;
+    if(!porPersona[k])porPersona[k]={cedula:r.cedula||'—',nombre:r.nombre,entrada:null,almSal:null,almReg:null,salida:null,tardanza:0};
+    const p=porPersona[k];
+    if(r.tipo==='entrada'){p.entrada=r.hora;p.tardanza=r.tardanza||0;}
+    if(r.tipo==='alm-sal')p.almSal=r.hora;
+    if(r.tipo==='alm-reg')p.almReg=r.hora;
+    if(r.tipo==='salida')p.salida=r.hora;
+  });
+  tbody.innerHTML='';
+  if(Object.keys(porPersona).length===0){
+    tbody.innerHTML='<tr><td colspan="8" style="text-align:center;padding:1.5rem;color:var(--gris-m);font-size:12px">Sin registros para esta fecha.</td></tr>';
+    document.getElementById('reg-gerente-resumen').style.display='none';return;
+  }
+  let totalPresentes=0,totalTardanzas=0;
+  Object.values(porPersona).forEach(p=>{
+    const emp=personalCache.find(e=>e.cedula===p.cedula||e.nombre===p.nombre);
+    const cargo=emp?.cargo||'—';
+    const esTarde=p.tardanza>5;
+    if(p.entrada)totalPresentes++;
+    if(esTarde)totalTardanzas++;
+    const estadoHtml=!p.entrada?`<span class="badge-sin">Sin reg.</span>`:esTarde?`<span class="badge-tard">Tarde</span>`:`<span class="badge-ok-s">A tiempo</span>`;
+    const tr=document.createElement('tr');
+    if(esTarde)tr.style.background='#fffbeb';
+    tr.innerHTML=`
+      <td style="font-weight:500;font-size:12px">${p.nombre}</td>
+      <td class="tc" style="font-size:11px;color:var(--gris-m)">${cargo}</td>
+      <td class="tc" style="font-size:12px">${p.entrada||'—'}</td>
+      <td class="tc" style="font-size:12px;color:var(--gris-m)">${p.almSal||'—'}</td>
+      <td class="tc" style="font-size:12px;color:var(--gris-m)">${p.almReg||'—'}</td>
+      <td class="tc" style="font-size:12px">${p.salida||'—'}</td>
+      <td class="tc">${estadoHtml}</td>
+      <td class="tc" style="${esTarde?'color:var(--am-t);font-weight:700':'color:var(--gris-m)'}">${esTarde?p.tardanza+' min':'—'}</td>`;
+    tbody.appendChild(tr);
+  });
+  const resumen=document.getElementById('reg-gerente-resumen');
+  resumen.style.display='flex';resumen.style.gap='10px';resumen.style.flexWrap='wrap';
+  resumen.innerHTML=`
+    <div style="background:var(--verde-c);color:var(--verde-t);border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700">✓ ${totalPresentes} presentes</div>
+    ${totalTardanzas>0?`<div style="background:var(--am-c);color:var(--am-t);border-radius:8px;padding:7px 12px;font-size:12px;font-weight:700">⚠ ${totalTardanzas} tardanza(s)</div>`:''}
+    <div style="background:var(--az-c);color:var(--az-t);border-radius:8px;padding:7px 12px;font-size:12px">📅 ${new Date(fecha+'T12:00:00').toLocaleDateString('es-CO',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</div>`;
+};
+
+window.exportarRegistrosGerente=()=>{
+  const fecha=document.getElementById('reg-fecha').value||'sin-fecha';
+  const rows=[['Persona','Cargo','Entrada','Sal. almuerzo','Reg. almuerzo','Salida','Estado','Tardanza (min)']];
+  document.querySelectorAll('#reg-gerente-body tr').forEach(tr=>{
+    const cells=Array.from(tr.querySelectorAll('td')).map(td=>td.textContent.trim());
+    if(cells.length>3)rows.push(cells);
+  });
+  const csv=rows.map(r=>r.join(';')).join('\n');
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=`registros_${curTienda.replace(/\s/g,'_')}_${fecha}.csv`;a.click();
+};
+
 async function cargarTardanzasHoy(){
   const banner=document.getElementById('tard-banner');
   if(!banner)return;
@@ -2475,7 +2703,15 @@ window.cancelarRechazo=()=>{
 };
 
 window.confirmarAprobar=async()=>{
+  const snapM=await getDoc(doc(db,'mallas',modalMallaId));
+  const m=snapM.data();
   await updateDoc(doc(db,'mallas',modalMallaId),{estado:'aprobada'});
+  // Guardar notificación para el gerente
+  await addDoc(collection(db,'notificaciones'),{
+    tienda:m.tienda,semana:m.semana,tipo:'aprobacion',
+    mensaje:`✓ Tu malla de la semana ${m.semana} fue aprobada.`,
+    fecha:new Date().toISOString(),leida:false,timestamp:serverTimestamp()
+  });
   if(modalMallaCard){
     modalMallaCard.querySelector('.pill').className='pill p-ok';
     modalMallaCard.querySelector('.pill').textContent='Aprobada';
@@ -2488,7 +2724,15 @@ window.confirmarAprobar=async()=>{
 window.confirmarRechazo=async()=>{
   const motivo=document.getElementById('rechazo-motivo').value.trim();
   if(!motivo){alert('Escribe el motivo del rechazo antes de confirmar.');return;}
+  const snapM=await getDoc(doc(db,'mallas',modalMallaId));
+  const m=snapM.data();
   await updateDoc(doc(db,'mallas',modalMallaId),{estado:'rechazada',motivoRechazo:motivo,fechaRechazo:new Date().toISOString()});
+  // Guardar notificación para el gerente
+  await addDoc(collection(db,'notificaciones'),{
+    tienda:m.tienda,semana:m.semana,tipo:'rechazo',
+    mensaje:`✗ Tu malla de la semana ${m.semana} fue rechazada. Motivo: ${motivo}`,
+    fecha:new Date().toISOString(),leida:false,timestamp:serverTimestamp()
+  });
   if(modalMallaCard){
     modalMallaCard.querySelector('.pill').className='pill p-rej';
     modalMallaCard.querySelector('.pill').textContent='Rechazada';
