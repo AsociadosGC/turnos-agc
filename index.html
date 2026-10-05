@@ -902,12 +902,15 @@ function buildNav(){
       if(t==='notificaciones')cargarNotificaciones();
       if(t==='malla')cargarMallasGuardadas();
       if(t==='extras'){
-        loadSelectPersonal();
         const hoy=new Date().toISOString().split('T')[0];
         document.getElementById('ext-fecha').value=hoy;
+        // Cargar personal primero, luego poblar select y cargar lista
+        await loadPersonal();
+        const selExt=document.getElementById('ext-emp');
+        selExt.innerHTML='<option value="">Seleccionar...</option>';
+        personalCache.forEach(p=>selExt.innerHTML+=`<option value="${p.id}">${p.nombre} · ${p.cargo}</option>`);
+        selExt.onchange=mostrarInfoTurnoExtra;
         cargarExtrasGerente();
-        // Info de turno al cambiar persona
-        document.getElementById('ext-emp').onchange=mostrarInfoTurnoExtra;
       }
       if(t==='turnos'){await loadTurnos();renderTurnos();}
       if(t==='ausencias'){await loadPersonal();loadSelectPersonal();loadAusencias();}
