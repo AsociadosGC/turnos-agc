@@ -235,6 +235,35 @@ body{font-family:var(--font);background:var(--bg);min-height:100vh;color:#1a1a2e
 </head>
 <body>
 
+<!-- MODAL EDITAR PERSONA -->
+<div class="modal-overlay" id="modal-editar-persona">
+  <div class="modal" style="max-width:380px">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-editar-title">Editar persona</div>
+      <button class="modal-close" onclick="cerrarModalEditar()">✕ Cerrar</button>
+    </div>
+    <div class="modal-body">
+      <input type="hidden" id="editar-id">
+      <div class="fg"><label>Nombre completo</label><input type="text" id="editar-nombre"></div>
+      <div class="fg"><label>Cargo</label>
+        <select id="editar-cargo">
+          <option value="ASESOR">Asesor</option>
+          <option value="SUBGERENTE">Subgerente</option>
+          <option value="GERENTE">Gerente</option>
+        </select>
+      </div>
+      <div class="fg"><label>Tipo de contrato</label>
+        <select id="editar-tipo">
+          <option value="TC">Tiempo completo (TC)</option>
+          <option value="MT">Medio tiempo (MT)</option>
+        </select>
+      </div>
+      <button class="btn-p" onclick="guardarEdicionPersona()">Guardar cambios</button>
+      <div class="alert-ok" id="editar-ok"></div>
+    </div>
+  </div>
+</div>
+
 <!-- MODAL FOTO REFERENCIA -->
 <div class="modal-overlay" id="modal-foto">
   <div class="modal" style="max-width:420px">
@@ -484,7 +513,7 @@ body{font-family:var(--font);background:var(--bg);min-height:100vh;color:#1a1a2e
         <div style="display:flex;gap:8px;align-items:flex-end;margin-bottom:1rem;flex-wrap:wrap">
           <div class="fg" style="margin-bottom:0;flex:1;min-width:160px">
             <label>Semana del (selecciona un jueves)</label>
-            <input type="date" id="m-semana">
+            <input type="date" id="m-semana" onchange="verificarMallaExistente()">
           </div>
           <button class="btn-s" onclick="generarMalla()">Cargar equipo</button>
         </div>
@@ -1000,6 +1029,7 @@ function renderEquipoList(){
         <span class="pill ${p.cargo==='GERENTE'?'p-ger':p.tipo==='TC'||esOtrosi?'p-tc':'p-mt'}">${esOtrosi?'Otrosí TC':p.tipo}</span>
         <button class="btn-deact" style="color:var(--azul);border-color:var(--azul)" onclick="abrirModalFoto('${p.id}','${p.nombre.replace(/'/g,"\\'")}')">📷 ${tieneFoto?'Actualizar foto':'Registrar foto'}</button>
         ${p.bloqueado?`<span class="pill p-rej">🔒 Bloqueado</span>`:''}
+        <button class="btn-deact" style="color:var(--verde-t);border-color:var(--verde-t)" onclick="editarPersona('${p.id}','${p.nombre.replace(/'/g,"\\'")}','${p.cargo}','${p.tipo}')">✏ Editar</button>
         <button class="btn-deact" style="color:var(--am-t);border-color:var(--am-t)" onclick="desactivar('${p.id}','${p.nombre.replace(/'/g,"\\'")}')">⏸ Desactivar</button>
         <button class="btn-deact" style="color:var(--rojo);border-color:var(--rojo)" onclick="eliminarPersona('${p.id}','${p.nombre.replace(/'/g,"\\'")}')">🗑 Eliminar</button>
       </div>`;
@@ -1078,6 +1108,29 @@ window.agregarPersona=async()=>{
   showOk('eq-ok',`✓ ${nom} agregado al equipo.`);
   document.getElementById('eq-ced').value='';document.getElementById('eq-nom').value='';
   await loadPersonal();
+};
+
+window.editarPersona=(id,nombre,cargo,tipo)=>{
+  document.getElementById('editar-id').value=id;
+  document.getElementById('editar-nombre').value=nombre;
+  document.getElementById('editar-cargo').value=cargo;
+  document.getElementById('editar-tipo').value=tipo;
+  document.getElementById('modal-editar-title').textContent=`Editar — ${nombre.split(' ').slice(0,2).join(' ')}`;
+  document.getElementById('editar-ok').style.display='none';
+  document.getElementById('modal-editar-persona').classList.add('open');
+};
+
+window.cerrarModalEditar=()=>document.getElementById('modal-editar-persona').classList.remove('open');
+
+window.guardarEdicionPersona=async()=>{
+  const id=document.getElementById('editar-id').value;
+  const nombre=document.getElementById('editar-nombre').value.trim();
+  const cargo=document.getElementById('editar-cargo').value;
+  const tipo=document.getElementById('editar-tipo').value;
+  if(!nombre){alert('El nombre es obligatorio');return;}
+  await updateDoc(doc(db,'personal',id),{nombre,cargo,tipo});
+  showOk('editar-ok','✓ Datos actualizados correctamente.');
+  setTimeout(()=>{cerrarModalEditar();loadPersonal();},1500);
 };
 
 window.reactivar=async(id,nombre)=>{
@@ -1273,7 +1326,13 @@ window.generarMalla=async(mallaIdEditar=null)=>{
     '<option value="VACACIONES">VACACIONES</option>',
     '<option value="PERMISO">PERMISO</option>',
   ].join('');
-  const optsTurnos=turnosCache.map(t=>`<option value="${t.id}">${t.nombre} (${t.horas}h)</option>`).join('');
+  // Formato: NOMBRE / 8am–5pm | alm 12pm (1h)
+  const fmtTurnoOpt=t=>{
+    const base=`${fmt12(t.entrada)}–${fmt12(t.salida)}`;
+    const alm=t.tieneAlm==='si'?` | alm ${fmt12(t.salAlm)} (${t.durAlm}h)`:'';
+    return `${t.nombre} / ${base}${alm}`;
+  };
+  const optsTurnos=turnosCache.map(t=>`<option value="${t.id}">${fmtTurnoOpt(t)}</option>`).join('');
   const tbody=document.getElementById('malla-body');tbody.innerHTML='';
 
   // Info dominicales
@@ -2460,24 +2519,66 @@ async function cargarMallasGuardadas(){
   mallas.forEach(m=>{
     const estadoPill=m.estado==='aprobada'?'p-ok':m.estado==='rechazada'?'p-rej':m.estado==='borrador'?'p-auto':'p-pend';
     const estadoLabel=m.estado==='aprobada'?'Aprobada':m.estado==='rechazada'?'Rechazada':m.estado==='borrador'?'Borrador':'Pendiente';
+    const puedeEliminar=m.estado==='borrador'||m.estado==='rechazada';
     const row=document.createElement('div');row.className='appr-card';
+    row.id=`malla-saved-${m.id}`;
     row.innerHTML=`
       <div class="appr-head">
         <div>
           <div class="appr-name">Semana del ${m.semana}</div>
           <div class="appr-detail">${Object.keys(m.data||{}).length} persona(s) · <span class="pill ${estadoPill}">${estadoLabel}</span>${m.motivoRechazo?`<br><span style="color:var(--rojo);font-size:10px">Motivo: ${m.motivoRechazo}</span>`:''}</div>
         </div>
-        <button class="btn-s" style="padding:4px 10px;font-size:11px" onclick="editarMalla('${m.id}','${m.semana}')">✏ Editar</button>
+        <div style="display:flex;gap:4px;flex-shrink:0">
+          <button class="btn-s" style="padding:4px 10px;font-size:11px" onclick="editarMalla('${m.id}','${m.semana}')">✏ Editar</button>
+          ${puedeEliminar?`<button class="btn-deact" style="color:var(--rojo);border-color:var(--rojo);padding:4px 10px;font-size:11px" onclick="eliminarMallaGuardada('${m.id}')">🗑 Eliminar</button>`:''}
+        </div>
       </div>`;
     list.appendChild(row);
   });
 }
 
+window.eliminarMallaGuardada=async(mallaId)=>{
+  if(!confirm('¿Eliminar esta malla?\n\nSolo se pueden eliminar borradores y mallas rechazadas.'))return;
+  try{
+    const {deleteDoc:delDoc}=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
+    await delDoc(doc(db,'mallas',mallaId));
+    const el=document.getElementById(`malla-saved-${mallaId}`);
+    if(el)el.remove();
+    // Si no quedan items recargar
+    await cargarMallasGuardadas();
+  }catch(e){alert('Error al eliminar: '+e.message);}
+};
+
 window.editarMalla=async(mallaId,semana)=>{
   document.getElementById('m-semana').value=semana;
   await generarMalla(mallaId);
-  // Scroll hasta la tabla
   document.getElementById('malla-tabla').scrollIntoView({behavior:'smooth'});
+};
+
+window.verificarMallaExistente=async()=>{
+  const semana=document.getElementById('m-semana').value;
+  const aviso=document.getElementById('malla-aviso');
+  if(!semana){aviso.style.display='none';return;}
+  // Buscar mallas existentes para esta semana
+  const q=query(collection(db,'mallas'),where('tienda','==',curTienda),where('semana','==',semana));
+  const snaps=await getDocs(q);
+  if(snaps.empty){aviso.style.display='none';return;}
+  const mallas=[];snaps.forEach(d=>mallas.push({id:d.id,...d.data()}));
+  const labels={'aprobada':'✓ Aprobada','pendiente':'⏳ Pendiente de aprobación','rechazada':'✗ Rechazada','borrador':'📝 Borrador'};
+  const colors={'aprobada':'var(--verde-c)','pendiente':'var(--am-c)','rechazada':'var(--rojo-c)','borrador':'var(--az-c)'};
+  const textColors={'aprobada':'var(--verde-t)','pendiente':'var(--am-t)','rechazada':'var(--rojo)','borrador':'var(--az-t)'};
+  let html='';
+  mallas.forEach(m=>{
+    const bg=colors[m.estado]||'var(--az-c)';
+    const tc=textColors[m.estado]||'var(--az-t)';
+    const lbl=labels[m.estado]||m.estado;
+    html+=`<div style="background:${bg};color:${tc};border-radius:8px;padding:8px 12px;margin-bottom:6px;display:flex;align-items:center;justify-content:space-between;font-size:12px">
+      <span><strong>${lbl}</strong> — ${Object.keys(m.data||{}).length} persona(s)</span>
+      <button class="btn-s" style="padding:3px 8px;font-size:11px" onclick="editarMalla('${m.id}','${m.semana}')">✏ Cargar esta malla</button>
+    </div>`;
+  });
+  aviso.innerHTML=html;
+  aviso.style.display='block';
 };
 
 // ── NOTIFICACIONES GERENTE ──
