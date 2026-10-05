@@ -679,7 +679,9 @@ body{font-family:var(--font);background:var(--bg);min-height:100vh;color:#1a1a2e
           <div class="card">
             <div class="card-title">Mallas pendientes</div>
             <div id="dash-mallas"><div style="font-size:12px;color:var(--gris-m)">Sin mallas pendientes.</div></div>
-            <div class="card-title" style="margin-top:1rem">Ausencias · OT · Otrosí pendientes</div>
+            <div class="card-title" style="margin-top:1rem">⚡ Horas extra pendientes</div>
+            <div id="dash-extras"><div style="font-size:12px;color:var(--gris-m)">Sin solicitudes de hora extra.</div></div>
+            <div class="card-title" style="margin-top:1rem">Ausencias · Otrosí pendientes</div>
             <div id="dash-aus"><div style="font-size:12px;color:var(--gris-m)">Sin solicitudes pendientes.</div></div>
           </div>
           <div class="card">
@@ -2462,18 +2464,47 @@ async function cargarExtrasGerente(){
 
 // En dashboard directora — sección extras pendientes
 async function cargarExtrasDirectora(){
+  const extDiv=document.getElementById('dash-extras');
+  if(!extDiv)return;
+  extDiv.innerHTML='';
   const qe=query(collection(db,'horas-extra'),where('estado','==','pendiente'));
   const snapE=await getDocs(qe);
-  const extDiv=document.getElementById('dash-aus');
+  if(snapE.empty){
+    extDiv.innerHTML='<div style="font-size:12px;color:var(--gris-m)">Sin solicitudes de hora extra.</div>';
+    return;
+  }
+  let count=0;
   snapE.forEach(d=>{
+    count++;
     const e=d.data();
-    const card=document.createElement('div');card.className='appr-card';
-    // Clasificar tipo de extra para mostrar info
     const ini=parseT(e.horaIni);const fin=parseT(e.horaFin);
     let mins=fin-ini;if(mins<0)mins+=1440;
-    card.innerHTML=`<div class="appr-head"><div><div class="appr-name">⚡ Hora extra — ${e.nombre}</div><div class="appr-detail">${e.tienda} · ${e.fecha} · ${fmt12(e.horaIni)} – ${fmt12(e.horaFin)} (${(mins/60).toFixed(1)}h)<br>${e.motivo}</div></div><span class="pill p-pend">Pendiente</span></div><div class="appr-btns"><button class="btn-sm-ok" onclick="aprobarExtra('${d.id}','${e.cedula}','${e.tienda}',this)">✓ Aprobar</button><button class="btn-sm-no" onclick="rechazarExtra('${d.id}',this)">✗ Rechazar</button></div>`;
-    extDiv.prepend(card);
+    // Determinar tipo preliminar
+    const esNoc=esNocturno(ini)||esNocturno(fin-1);
+    const tipoLbl=esNoc?'Posible HEN/HEND':'Posible HED/HEDD';
+    const card=document.createElement('div');card.className='appr-card';
+    card.style.borderLeft='3px solid var(--dorado)';
+    card.innerHTML=`
+      <div class="appr-head">
+        <div>
+          <div class="appr-name">⚡ ${e.nombre}</div>
+          <div class="appr-detail">
+            ${e.tienda} · ${e.fecha}<br>
+            ${fmt12(e.horaIni)} – ${fmt12(e.horaFin)} · <strong>${(mins/60).toFixed(1)}h</strong> · <span style="color:var(--am-t)">${tipoLbl}</span><br>
+            <em>${e.motivo}</em>
+          </div>
+        </div>
+        <span class="pill p-pend">Pendiente</span>
+      </div>
+      <div class="appr-btns" style="margin-top:6px">
+        <button class="btn-sm-ok" onclick="aprobarExtra('${d.id}','${e.cedula||e.empId}','${e.tienda}',this)">✓ Aprobar</button>
+        <button class="btn-sm-no" onclick="rechazarExtra('${d.id}',this)">✗ Rechazar</button>
+      </div>`;
+    extDiv.appendChild(card);
   });
+  // Actualizar métrica
+  const dmAus=document.getElementById('dm-aus');
+  if(dmAus)dmAus.textContent=parseInt(dmAus.textContent||'0')+count;
 }
 
 window.aprobarExtra=async(id,cedula,tienda,btn)=>{
