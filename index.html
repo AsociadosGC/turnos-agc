@@ -595,6 +595,29 @@ body{font-family:var(--font);background:var(--bg);min-height:100vh;color:#1a1a2e
       </div>
     </div>
 
+    <!-- HORAS EXTRA GERENTE -->
+    <div class="view" id="view-extras">
+      <div class="two-col">
+        <div class="card">
+          <div class="card-title">Solicitar hora extra</div>
+          <div class="fg"><label>Persona</label><select id="ext-emp"><option value="">Seleccionar...</option></select></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div class="fg"><label>Hora inicio extra</label><input type="time" id="ext-ini"></div>
+            <div class="fg"><label>Hora fin estimada</label><input type="time" id="ext-fin"></div>
+          </div>
+          <div class="fg"><label>Fecha</label><input type="date" id="ext-fecha"></div>
+          <div class="fg"><label>Motivo</label><input type="text" id="ext-motivo" placeholder="Ej: Inventario, actividad comercial, apoyo cierre..."></div>
+          <div id="ext-info" style="display:none;font-size:11px;padding:7px 9px;border-radius:7px;margin-bottom:8px;background:var(--az-c);color:var(--az-t)"></div>
+          <button class="btn-p" onclick="solicitarHoraExtra()">Enviar solicitud a Directora</button>
+          <div class="alert-ok" id="ext-ok"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Solicitudes enviadas</div>
+          <div id="ext-list"><div style="font-size:12px;color:var(--gris-m)">Sin solicitudes.</div></div>
+        </div>
+      </div>
+    </div>
+
     <!-- NOTIFICACIONES GERENTE -->
     <div class="view" id="view-notificaciones">
       <div class="card">
@@ -684,33 +707,45 @@ body{font-family:var(--font);background:var(--bg);min-height:100vh;color:#1a1a2e
       <div class="card">
         <div class="card-title">Reporte de nómina</div>
         <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;align-items:flex-end">
-          <div class="fg" style="margin-bottom:0;flex:1;min-width:120px"><label>Mes</label>
-            <select id="rep-mes"><option>Junio 2026</option><option>Julio 2026</option><option>Agosto 2026</option><option>Septiembre 2026</option></select></div>
+          <div class="fg" style="margin-bottom:0;flex:1;min-width:120px"><label>Periodo</label>
+            <select id="rep-mes">
+              <option value="2026-06">Junio 2026</option>
+              <option value="2026-07">Julio 2026</option>
+              <option value="2026-08">Agosto 2026</option>
+              <option value="2026-09">Septiembre 2026</option>
+              <option value="2026-10">Octubre 2026</option>
+              <option value="2026-11">Noviembre 2026</option>
+              <option value="2026-12">Diciembre 2026</option>
+            </select></div>
           <div class="fg" style="margin-bottom:0;flex:1;min-width:150px"><label>Tienda</label>
             <select id="rep-tienda"><option value="all">Todas las tiendas</option></select></div>
           <button class="btn-p" style="width:auto;margin-top:0;padding:8px 14px" onclick="generarReporte()">Generar</button>
           <button class="btn-s" style="padding:8px 14px" onclick="exportarCSV()">📥 Exportar</button>
         </div>
-        <div style="font-size:11px;color:var(--gris-m);margin-bottom:8px">
-          🔵 Dominical = día de descanso asignado trabajado · ⚡ OT = horas sobre jornada máxima (TC:42h MT:21h · Gerentes sin límite)
+        <div style="font-size:10px;color:var(--gris-m);margin-bottom:8px;line-height:1.6">
+          <strong>Diurno:</strong> 6am–7pm · <strong>Nocturno:</strong> 7pm–6am · <strong>Jornada máxima:</strong> TC 42h · MT 21h · Gerentes D&amp;C
+          <br><strong>HRN</strong> Rec. nocturno · <strong>HRD</strong> Rec. dominical · <strong>HED</strong> Extra diurna · <strong>HEN</strong> Extra nocturna · <strong>HEDD</strong> Extra diurna dominical · <strong>HEND</strong> Extra nocturna dominical
         </div>
         <div style="overflow-x:auto">
-          <table class="rep-table">
+          <table class="rep-table" id="rep-tabla">
             <thead><tr>
-              <th style="width:8%">Cédula</th>
-              <th style="width:15%">Nombre</th>
-              <th style="width:11%">Tienda</th>
-              <th style="width:6%">Tipo</th>
-              <th class="tc" style="width:8%">Hrs trab.</th>
-              <th class="tc" style="width:7%">⚡ OT</th>
-              <th class="tc" style="width:7%">🔵 Domin.</th>
-              <th class="tc" style="width:8%">Rec. noct.</th>
-              <th class="tc" style="width:7%">Ausencias</th>
-              <th class="tc" style="width:9%">Tipo aus.</th>
-              <th class="tc" style="width:6%">Faltas</th>
-              <th class="tc" style="width:8%">Asist.</th>
+              <th style="min-width:80px">Cédula</th>
+              <th style="min-width:140px">Nombre</th>
+              <th style="min-width:100px">Tienda</th>
+              <th class="tc" style="min-width:50px">Tipo</th>
+              <th class="tc" style="min-width:60px">Hrs trab.</th>
+              <th class="tc" style="min-width:50px">HRN</th>
+              <th class="tc" style="min-width:50px">HRD</th>
+              <th class="tc" style="min-width:50px">HED</th>
+              <th class="tc" style="min-width:50px">HEN</th>
+              <th class="tc" style="min-width:55px">HEDD</th>
+              <th class="tc" style="min-width:55px">HEND</th>
+              <th class="tc" style="min-width:60px">Días aus.</th>
+              <th class="tc" style="min-width:90px">Tipo aus.</th>
+              <th class="tc" style="min-width:50px">Faltas</th>
+              <th class="tc" style="min-width:60px">% Asist.</th>
             </tr></thead>
-            <tbody id="rep-body"><tr><td colspan="12" style="text-align:center;padding:1.5rem;color:var(--gris-m);font-size:12px">Selecciona el mes y genera el reporte.</td></tr></tbody>
+            <tbody id="rep-body"><tr><td colspan="15" style="text-align:center;padding:1.5rem;color:var(--gris-m);font-size:12px">Selecciona el periodo y genera el reporte.</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -774,7 +809,7 @@ const AUS_TIPOS={
 };
 const ROLES={
   directora:{tabs:['dashboard','historial-mallas','reporte'],labels:['📊 Dashboard','📅 Historial mallas','📄 Reporte nómina']},
-  gerente:{tabs:['kiosk','equipo','turnos','malla','ausencias','registros','notificaciones'],labels:['🖥 Kiosk','👥 Mi equipo','⏰ Mis turnos','📅 Malla semanal','📋 Ausencias','📋 Registros','🔔 Notificaciones']},
+  gerente:{tabs:['kiosk','equipo','turnos','malla','ausencias','registros','extras','notificaciones'],labels:['🖥 Kiosk','👥 Mi equipo','⏰ Mis turnos','📅 Malla semanal','📋 Ausencias','📋 Registros','⚡ Horas extra','🔔 Notificaciones']},
   consulta:{tabs:['historial-mallas'],labels:['📅 Historial mallas']}
 };
 
@@ -866,6 +901,14 @@ function buildNav(){
       }
       if(t==='notificaciones')cargarNotificaciones();
       if(t==='malla')cargarMallasGuardadas();
+      if(t==='extras'){
+        loadSelectPersonal();
+        const hoy=new Date().toISOString().split('T')[0];
+        document.getElementById('ext-fecha').value=hoy;
+        cargarExtrasGerente();
+        // Info de turno al cambiar persona
+        document.getElementById('ext-emp').onchange=mostrarInfoTurnoExtra;
+      }
       if(t==='turnos'){await loadTurnos();renderTurnos();}
       if(t==='ausencias'){await loadPersonal();loadSelectPersonal();loadAusencias();}
       if(t==='dashboard')loadDashboard();
@@ -2280,6 +2323,126 @@ window.toggleHistBody=(bodyId,chevId)=>{
   body.classList.toggle('open');
   if(chev)chev.textContent=body.classList.contains('open')?'▲':'▼';
 };
+// ── HORAS EXTRA ──
+window.mostrarInfoTurnoExtra=async()=>{
+  const empId=document.getElementById('ext-emp').value;
+  const fecha=document.getElementById('ext-fecha').value;
+  if(!empId||!fecha)return;
+  const info=document.getElementById('ext-info');
+  // Buscar turno en malla
+  const q=query(collection(db,'mallas'),where('tienda','==',curTienda),where('estado','in',['aprobada','pendiente']));
+  const snaps=await getDocs(q);
+  let turnoHoy=null;
+  const fechaD=new Date(fecha+'T12:00:00');
+  snaps.forEach(d=>{
+    const m=d.data();
+    const semD=new Date(m.semana+'T12:00:00');
+    const lun=new Date(semD);lun.setDate(semD.getDate()-((semD.getDay()+6)%7));
+    const dom=new Date(lun);dom.setDate(lun.getDate()+6);
+    if(fechaD>=lun&&fechaD<=dom){
+      const colMap={1:0,2:1,3:2,4:3,5:4,6:5,0:6};
+      const col=colMap[fechaD.getDay()];
+      const turnoId=m.data?.[empId]?.[col];
+      if(turnoId&&!['DESCANSO','INCAPACIDAD','VACACIONES','PERMISO'].includes(turnoId)){
+        turnoHoy={id:turnoId,...(turnosCache.find(t=>t.id===turnoId)||{})};
+      }
+    }
+  });
+  if(turnoHoy?.entrada){
+    info.style.display='block';
+    info.textContent=`Turno programado: ${fmt12(turnoHoy.entrada)} – ${fmt12(turnoHoy.salida)}. La hora extra inicia desde ${fmt12(turnoHoy.salida)}.`;
+    document.getElementById('ext-ini').value=turnoHoy.salida||'';
+  }else{
+    info.style.display='block';
+    info.textContent='Sin turno encontrado en malla para esta fecha.';
+    info.style.background='var(--am-c)';info.style.color='var(--am-t)';
+  }
+};
+
+window.solicitarHoraExtra=async()=>{
+  const empId=document.getElementById('ext-emp').value;
+  const ini=document.getElementById('ext-ini').value;
+  const fin=document.getElementById('ext-fin').value;
+  const fecha=document.getElementById('ext-fecha').value;
+  const motivo=document.getElementById('ext-motivo').value.trim();
+  if(!empId||!ini||!fin||!motivo){alert('Completa todos los campos');return;}
+  if(fin<=ini){alert('La hora de fin debe ser posterior a la hora de inicio');return;}
+  const emp=personalCache.find(p=>p.id===empId);
+  await addDoc(collection(db,'horas-extra'),{
+    empId,cedula:emp?.cedula||empId,nombre:emp?.nombre||empId,
+    tienda:curTienda,fecha,horaIni:ini,horaFin:fin,
+    motivo,estado:'pendiente',
+    creadoPor:curUser.uid,timestamp:serverTimestamp()
+  });
+  showOk('ext-ok','✓ Solicitud enviada a la Directora de Operaciones.');
+  document.getElementById('ext-motivo').value='';
+  document.getElementById('ext-ini').value='';
+  document.getElementById('ext-fin').value='';
+  cargarExtrasGerente();
+};
+
+async function cargarExtrasGerente(){
+  const list=document.getElementById('ext-list');if(!list)return;
+  const q=query(collection(db,'horas-extra'),where('tienda','==',curTienda));
+  const snaps=await getDocs(q);
+  const extras=[];snaps.forEach(d=>extras.push({id:d.id,...d.data()}));
+  extras.sort((a,b)=>b.fecha?.localeCompare(a.fecha||'')||0);
+  if(!extras.length){list.innerHTML='<div style="font-size:12px;color:var(--gris-m)">Sin solicitudes enviadas.</div>';return;}
+  list.innerHTML='';
+  extras.slice(0,10).forEach(e=>{
+    const pill=e.estado==='aprobada'?'p-ok':e.estado==='rechazada'?'p-rej':'p-pend';
+    const label=e.estado==='aprobada'?'Aprobada':e.estado==='rechazada'?'Rechazada':'Pendiente';
+    const div=document.createElement('div');div.className='appr-card';
+    div.innerHTML=`<div class="appr-head"><div><div class="appr-name">${e.nombre}</div><div class="appr-detail">${e.fecha} · ${fmt12(e.horaIni)} – ${fmt12(e.horaFin)} · ${e.motivo}</div></div><span class="pill ${pill}">${label}</span></div>`;
+    list.appendChild(div);
+  });
+}
+
+// En dashboard directora — sección extras pendientes
+async function cargarExtrasDirectora(){
+  const qe=query(collection(db,'horas-extra'),where('estado','==','pendiente'));
+  const snapE=await getDocs(qe);
+  const extDiv=document.getElementById('dash-aus');
+  snapE.forEach(d=>{
+    const e=d.data();
+    const card=document.createElement('div');card.className='appr-card';
+    // Clasificar tipo de extra para mostrar info
+    const ini=parseT(e.horaIni);const fin=parseT(e.horaFin);
+    let mins=fin-ini;if(mins<0)mins+=1440;
+    card.innerHTML=`<div class="appr-head"><div><div class="appr-name">⚡ Hora extra — ${e.nombre}</div><div class="appr-detail">${e.tienda} · ${e.fecha} · ${fmt12(e.horaIni)} – ${fmt12(e.horaFin)} (${(mins/60).toFixed(1)}h)<br>${e.motivo}</div></div><span class="pill p-pend">Pendiente</span></div><div class="appr-btns"><button class="btn-sm-ok" onclick="aprobarExtra('${d.id}','${e.cedula}','${e.tienda}',this)">✓ Aprobar</button><button class="btn-sm-no" onclick="rechazarExtra('${d.id}',this)">✗ Rechazar</button></div>`;
+    extDiv.prepend(card);
+  });
+}
+
+window.aprobarExtra=async(id,cedula,tienda,btn)=>{
+  await updateDoc(doc(db,'horas-extra',id),{estado:'aprobada',aprobadoPor:curUser.uid,fechaAprobacion:new Date().toISOString()});
+  // Notificación al gerente
+  await addDoc(collection(db,'notificaciones'),{
+    tienda,tipo:'extra-aprobada',
+    mensaje:`✓ Hora extra aprobada para ${btn.closest('.appr-card').querySelector('.appr-name').textContent.replace('⚡ Hora extra — ','')}`,
+    fecha:new Date().toISOString(),leida:false,timestamp:serverTimestamp()
+  });
+  btn.closest('.appr-card').querySelector('.pill').className='pill p-ok';
+  btn.closest('.appr-card').querySelector('.pill').textContent='Aprobada';
+  btn.closest('.appr-btns').innerHTML='<span style="font-size:11px;color:var(--verde-t)">✓ Aprobada — gerente notificado</span>';
+};
+
+window.rechazarExtra=async(id,btn)=>{
+  const motivo=prompt('Motivo del rechazo (obligatorio):');
+  if(!motivo)return;
+  const snap=await getDoc(doc(db,'horas-extra',id));
+  const e=snap.data();
+  await updateDoc(doc(db,'horas-extra',id),{estado:'rechazada',motivoRechazo:motivo});
+  await addDoc(collection(db,'notificaciones'),{
+    tienda:e.tienda,tipo:'extra-rechazada',
+    mensaje:`✗ Hora extra rechazada. Motivo: ${motivo}`,
+    fecha:new Date().toISOString(),leida:false,timestamp:serverTimestamp()
+  });
+  btn.closest('.appr-card').querySelector('.pill').className='pill p-rej';
+  btn.closest('.appr-card').querySelector('.pill').textContent='Rechazada';
+  btn.closest('.appr-btns').innerHTML=`<span style="font-size:11px;color:var(--rojo)">✗ Rechazada — ${motivo}</span>`;
+};
+
 // ── MALLAS GUARDADAS ──
 async function cargarMallasGuardadas(){
   const list=document.getElementById('mallas-guardadas-list');
@@ -2562,6 +2725,7 @@ async function loadDashboard(){
   // Cargar alertas y registro del día
   cargarAlertas();
   cargarRegistroDia();
+  cargarExtrasDirectora();
   const qm=query(collection(db,'mallas'),where('estado','==','pendiente'));
   const snapM=await getDocs(qm);
   document.getElementById('dm-mallas').textContent=snapM.size;
@@ -2775,58 +2939,223 @@ function loadTiendasSelect(){
   TODAS_TIENDAS.forEach(t=>sel.innerHTML+=`<option value="${t}">${t}</option>`);
 }
 
+// ── HELPERS RECARGOS ──
+const H_DIURNO_FIN_MIN=19*60; // 7pm
+const H_NOC_FIN_MIN=6*60;     // 6am
+
+function esNocturno(minDesdeMedianoche){
+  return minDesdeMedianoche>=H_DIURNO_FIN_MIN||minDesdeMedianoche<H_NOC_FIN_MIN;
+}
+
+function parse12to24Min(str){
+  if(!str)return null;
+  const clean=str.trim().toLowerCase();
+  const ispm=clean.includes('pm');
+  const isam=clean.includes('am');
+  const nums=clean.replace(/[^0-9:]/g,'');
+  const parts=nums.split(':');
+  let h=parseInt(parts[0])||0;
+  const m=parseInt(parts[1])||0;
+  if(ispm&&h!==12)h+=12;
+  if(isam&&h===12)h=0;
+  return h*60+m;
+}
+
 window.generarReporte=async()=>{
-  const snaps=await getDocs(collection(db,'registros'));
-  const datos={};
-  snaps.forEach(d=>{
-    const r=d.data();const k=r.cedula||r.nombre;
-    if(!datos[k])datos[k]={cedula:r.cedula||'—',nombre:r.nombre,tienda:r.tienda,cargo:'ASESOR',tipo:'TC',entradas:0,tardanzas:0,faltas:0,extras:0,dom:0,noc:0,aus:0,tipoAus:'—'};
-    if(r.tipo==='entrada')datos[k].entradas++;
-  });
-  // Cargar cargo y tipo de personal
-  const snapP=await getDocs(collection(db,'personal'));
-  snapP.forEach(d=>{const p=d.data();const k=p.cedula||d.id;if(datos[k]){datos[k].cargo=p.cargo;datos[k].tipo=p.tipo;}});
-  // Ausencias
-  const snapA=await getDocs(collection(db,'ausencias'));
-  snapA.forEach(d=>{const a=d.data();const k=a.cedula||a.empId;if(datos[k]){datos[k].aus+=a.dias;datos[k].tipoAus=AUS_TIPOS[a.tipo]?.label||a.tipo;}});
-  // Calcular dominicales y OT desde mallas
-  const snapM=await getDocs(query(collection(db,'mallas'),where('estado','==','aprobada')));
-  snapM.forEach(d=>{
-    const m=d.data();
-    Object.entries(m.data||{}).forEach(([empId,dias])=>{
-      const emp=datos[empId];if(!emp)return;
-      const diaDescanso=DESCANSOS[m.tienda]?.[emp.cargo==='GERENTE'?'GERENTE':emp.cargo==='SUBGERENTE'?'SUBGERENTE':'ASESOR'];
-      let hSem=0;
-      Object.entries(dias).forEach(([col,turnoId])=>{
-        if(['DESCANSO','INCAPACIDAD','VACACIONES','PERMISO'].includes(turnoId))return;
-        const jsDay=colToJsDay(parseInt(col));
-        if(diaDescanso!==null&&jsDay===diaDescanso)emp.dom++;
-      });
-    });
-  });
-  const tbody=document.getElementById('rep-body');tbody.innerHTML='';
+  const periodo=document.getElementById('rep-mes').value;
   const tiendaFiltro=document.getElementById('rep-tienda').value;
-  Object.values(datos).filter(r=>tiendaFiltro==='all'||r.tienda===tiendaFiltro).forEach(r=>{
-    const esGer=r.cargo==='GERENTE'||r.cargo==='SUBGERENTE';
-    const maxH=esGer?999:r.tipo==='MT'?21:42;
-    const hTrab=r.entradas*8;
-    const ot=!esGer?Math.max(0,hTrab-maxH):0;
-    const asist=r.entradas>0?Math.round(r.entradas/(r.entradas+r.faltas+0.001)*100):0;
-    tbody.innerHTML+=`<tr><td style="font-size:10px">${r.cedula}</td><td style="font-size:11px;font-weight:500">${r.nombre}</td><td style="font-size:10px;color:var(--gris-m)">${r.tienda}</td><td class="tc"><span class="pill ${r.cargo==='GERENTE'?'p-ger':r.tipo==='TC'?'p-tc':'p-mt'}">${esGer?r.cargo:r.tipo}</span></td><td class="tc num-ok">${hTrab}h</td><td class="tc num-ot">${esGer?'D&C':ot>0?'+'+ot+'h':'—'}</td><td class="tc num-dom">${r.dom}</td><td class="tc" style="color:var(--am-t);font-weight:700">${r.noc}h</td><td class="tc num-aus">${r.aus}</td><td class="tc" style="font-size:10px;color:var(--gris-m)">${r.tipoAus}</td><td class="tc" style="color:var(--rojo);font-weight:700">${r.faltas}</td><td class="tc" style="color:var(--verde-t);font-weight:700">${asist}%</td></tr>`;
+  const tbody=document.getElementById('rep-body');
+  tbody.innerHTML='<tr><td colspan="15" style="text-align:center;padding:1rem;color:var(--gris-m)">Calculando...</td></tr>';
+
+  // Cargar datos base
+  const snapP=await getDocs(collection(db,'personal'));
+  const personal={};
+  snapP.forEach(d=>{const p={...d.data(),id:d.id};personal[p.cedula||d.id]=p;personal[d.id]=p;});
+
+  const snapT=await getDocs(collection(db,'turnos-maestros'));
+  const turnos={};
+  snapT.forEach(d=>turnos[d.id]={...d.data(),id:d.id});
+
+  // Mallas aprobadas del periodo
+  const snapM=await getDocs(query(collection(db,'mallas'),where('estado','==','aprobada')));
+  const mallasPeriodo=[];
+  const [anio,mes]=periodo.split('-').map(Number);
+  snapM.forEach(d=>{
+    const m={id:d.id,...d.data()};
+    if(!m.semana)return;
+    const semD=new Date(m.semana+'T12:00:00');
+    const lun=new Date(semD);lun.setDate(semD.getDate()-((semD.getDay()+6)%7));
+    const dom=new Date(lun);dom.setDate(lun.getDate()+6);
+    // Incluir si algún día de la semana cae en el mes del periodo
+    if((lun.getFullYear()===anio&&lun.getMonth()+1===mes)||(dom.getFullYear()===anio&&dom.getMonth()+1===mes))
+      mallasPeriodo.push({...m,_lunes:lun});
   });
-  if(tbody.innerHTML==='')tbody.innerHTML='<tr><td colspan="12" style="text-align:center;padding:1.5rem;color:var(--gris-m);font-size:12px">Sin registros para el período seleccionado.</td></tr>';
+
+  // Registros reales del periodo
+  const snapR=await getDocs(collection(db,'registros'));
+  const registros={};
+  snapR.forEach(d=>{
+    const r=d.data();
+    if(!r.fecha)return;
+    const [ry,rm]=r.fecha.split('-').map(Number);
+    if(ry!==anio||rm!==mes)return;
+    const k=r.cedula||r.nombre;
+    if(!registros[k])registros[k]={};
+    if(!registros[k][r.fecha])registros[k][r.fecha]={entrada:null,salida:null,almSal:null,almReg:null};
+    const reg=registros[k][r.fecha];
+    if(r.tipo==='entrada')reg.entrada=r.hora;
+    if(r.tipo==='salida')reg.salida=r.hora;
+    if(r.tipo==='alm-sal')reg.almSal=r.hora;
+    if(r.tipo==='alm-reg')reg.almReg=r.hora;
+  });
+
+  // Ausencias del periodo
+  const snapA=await getDocs(collection(db,'ausencias'));
+  const ausencias={};
+  snapA.forEach(d=>{
+    const a=d.data();if(!a.ini)return;
+    const [ay,am]=a.ini.split('-').map(Number);if(ay!==anio||am!==mes)return;
+    const k=a.cedula||a.empId;
+    if(!ausencias[k])ausencias[k]={dias:0,tipos:[]};
+    ausencias[k].dias+=a.dias||0;
+    const label=AUS_TIPOS[a.tipo]?.label||a.tipo;
+    if(!ausencias[k].tipos.includes(label))ausencias[k].tipos.push(label);
+  });
+
+  // Extras aprobadas del periodo
+  const snapE=await getDocs(query(collection(db,'horas-extra'),where('estado','==','aprobada')));
+  const extras={};
+  snapE.forEach(d=>{
+    const e=d.data();if(!e.fecha)return;
+    const [ey,em]=e.fecha.split('-').map(Number);if(ey!==anio||em!==mes)return;
+    const k=e.cedula;
+    if(!extras[k])extras[k]=[];
+    extras[k].push(e);
+  });
+
+  // Calcular por persona
+  const resultado={};
+
+  for(const m of mallasPeriodo){
+    if(tiendaFiltro!=='all'&&m.tienda!==tiendaFiltro)continue;
+
+    Object.entries(m.data||{}).forEach(([empId,dias])=>{
+      const p=personal[empId];if(!p)return;
+      const esGer=p.cargo==='GERENTE'||p.cargo==='SUBGERENTE';
+      const diaDescanso=getDiaDescanso(m.tienda,p.cargo);
+      const k=empId;
+      if(!resultado[k])resultado[k]={
+        cedula:p.cedula||empId,nombre:p.nombre,tienda:m.tienda,
+        cargo:p.cargo,tipo:p.tipo,
+        hTrab:0,HRN:0,HRD:0,HED:0,HEN:0,HEDD:0,HEND:0,
+        diasAus:0,tiposAus:[],faltas:0,diasTrab:0
+      };
+      const res=resultado[k];
+
+      Object.entries(dias).forEach(([col,turnoId])=>{
+        const fechaDia=new Date(m._lunes);fechaDia.setDate(m._lunes.getDate()+parseInt(col));
+        const [fy,fm]=fechaDia.toISOString().split('T')[0].split('-').map(Number);
+        if(fy!==anio||fm!==mes)return;
+        const fechaStr=fechaDia.toISOString().split('T')[0];
+        const jsDay=colToJsDay(parseInt(col));
+        const esDiaDesc=diaDescanso!==null&&jsDay===diaDescanso;
+
+        if(['INCAPACIDAD','VACACIONES','PERMISO'].includes(turnoId)){res.diasAus++;return;}
+        if(turnoId==='DESCANSO')return;
+        const t=turnos[turnoId];if(!t)return;
+
+        const regDia=registros[empId]?.[fechaStr]||registros[p.cedula]?.[fechaStr];
+        if(!regDia?.entrada){res.faltas++;return;}
+        res.diasTrab++;
+
+        const entMin=parse12to24Min(regDia.entrada)||parseT(t.entrada);
+        const salMin=regDia.salida?parse12to24Min(regDia.salida):parseT(t.salida);
+        const almIniMin=regDia.almSal?parse12to24Min(regDia.almSal):(t.tieneAlm==='si'?parseT(t.salAlm):-1);
+        const durAlmMin=t.tieneAlm==='si'?(t.durAlm||1)*60:0;
+
+        // Calcular horas minuto a minuto
+        let hNocNormal=0,hDiuNormal=0;
+        for(let mm=entMin;mm<salMin;mm++){
+          if(almIniMin>0&&mm>=almIniMin&&mm<almIniMin+durAlmMin)continue;
+          if(esNocturno(mm))hNocNormal++;
+          else hDiuNormal++;
+        }
+        const hTotDia=(hNocNormal+hDiuNormal)/60;
+        res.hTrab+=hTotDia;
+
+        // HRN — recargo nocturno en jornada normal (no día descanso)
+        if(!esDiaDesc&&!esGer)res.HRN+=hNocNormal/60;
+        // HRD — recargo dominical normal (día descanso, sin extras)
+        if(esDiaDesc&&!esGer)res.HRD+=hTotDia;
+      });
+
+      // Extras aprobadas para esta persona en este mes
+      const extPer=extras[empId]||extras[p.cedula]||[];
+      if(!esGer){
+        extPer.forEach(ext=>{
+          const fechaExt=new Date(ext.fecha+'T12:00:00');
+          const jsDay=fechaExt.getDay();
+          const esDom=diaDescanso!==null&&jsDay===diaDescanso;
+          const ini=parseT(ext.horaIni);
+          const fin=parseT(ext.horaFin);
+          for(let mm=ini;mm<fin;mm++){
+            const noc=esNocturno(mm);
+            if(esDom){if(noc)res.HEND+=1/60;else res.HEDD+=1/60;}
+            else{if(noc)res.HEN+=1/60;else res.HED+=1/60;}
+          }
+        });
+      }
+    });
+  }
+
+  // Agregar ausencias
+  Object.entries(ausencias).forEach(([ced,a])=>{
+    if(resultado[ced]){resultado[ced].diasAus+=a.dias;resultado[ced].tiposAus.push(...a.tipos);}
+  });
+
+  // Renderizar
+  tbody.innerHTML='';
+  const filas=Object.values(resultado).filter(r=>tiendaFiltro==='all'||r.tienda===tiendaFiltro);
+  if(!filas.length){tbody.innerHTML='<tr><td colspan="15" style="text-align:center;padding:1.5rem;color:var(--gris-m);font-size:12px">Sin registros para el período seleccionado.</td></tr>';return;}
+  const rnd=v=>v>0?+(v.toFixed(2)):null;
+  const fmt=v=>v!=null?v:'—';
+  filas.forEach(r=>{
+    const esGer=r.cargo==='GERENTE'||r.cargo==='SUBGERENTE';
+    const total=r.diasTrab+r.diasAus+r.faltas;
+    const asist=total>0?Math.round(r.diasTrab/total*100):0;
+    tbody.innerHTML+=`<tr>
+      <td style="font-size:10px">${r.cedula}</td>
+      <td style="font-size:11px;font-weight:500">${r.nombre}</td>
+      <td style="font-size:10px;color:var(--gris-m)">${r.tienda}</td>
+      <td class="tc"><span class="pill ${esGer?'p-ger':r.tipo==='TC'?'p-tc':'p-mt'}">${esGer?r.cargo:r.tipo}</span></td>
+      <td class="tc" style="font-weight:700;color:var(--verde-t)">${fmt(rnd(r.hTrab))}</td>
+      <td class="tc" style="color:var(--am-t)">${esGer?'—':fmt(rnd(r.HRN))}</td>
+      <td class="tc num-dom">${esGer?'—':fmt(rnd(r.HRD))}</td>
+      <td class="tc num-ot">${esGer?'D&C':fmt(rnd(r.HED))}</td>
+      <td class="tc num-ot">${esGer?'D&C':fmt(rnd(r.HEN))}</td>
+      <td class="tc num-ot">${esGer?'D&C':fmt(rnd(r.HEDD))}</td>
+      <td class="tc num-ot">${esGer?'D&C':fmt(rnd(r.HEND))}</td>
+      <td class="tc num-aus">${r.diasAus||'—'}</td>
+      <td class="tc" style="font-size:10px;color:var(--gris-m)">${[...new Set(r.tiposAus)].join(', ')||'—'}</td>
+      <td class="tc" style="color:var(--rojo)">${r.faltas||'—'}</td>
+      <td class="tc" style="color:var(--verde-t);font-weight:700">${asist}%</td>
+    </tr>`;
+  });
 };
 
 window.exportarCSV=()=>{
-  const rows=[['Cédula','Nombre','Tienda','Tipo','Hrs trabajadas','OT','Dominicales','Rec. nocturno','Días ausencia','Tipo ausencia','Faltas','% Asistencia']];
+  const periodo=document.getElementById('rep-mes').value||'periodo';
+  const rows=[['Cédula','Nombre','Tienda','Tipo contrato','Hrs trabajadas','HRN','HRD','HED','HEN','HEDD','HEND','Días ausencia','Tipo ausencia','Faltas','% Asistencia']];
   document.querySelectorAll('#rep-body tr').forEach(tr=>{
     const cells=Array.from(tr.querySelectorAll('td')).map(td=>td.textContent.trim());
     if(cells.length>3)rows.push(cells);
   });
   const csv=rows.map(r=>r.join(';')).join('\n');
   const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
-  const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='reporte-nomina-AGC.csv';a.click();
+  const a=document.createElement('a');a.href=URL.createObjectURL(blob);
+  a.download=`nomina_AGC_${periodo}.csv`;a.click();
 };
+
 
 // Init
 window.updateAusTipo();
