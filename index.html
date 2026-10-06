@@ -622,6 +622,33 @@ body{font-family:var(--font);background:var(--bg);min-height:100vh;color:#1a1a2e
           </table>
         </div>
       </div>
+      <!-- REGISTRO MANUAL -->
+      <div class="card">
+        <div class="card-title">Solicitar registro manual</div>
+        <div style="font-size:11px;color:var(--gris-m);margin-bottom:1rem">Para casos donde la persona no pudo registrarse correctamente en el kiosk. Requiere aprobación de la Directora de Operaciones.</div>
+        <div class="two-col">
+          <div>
+            <div class="fg"><label>Persona</label><select id="rm-emp"><option value="">Seleccionar...</option></select></div>
+            <div class="fg"><label>Fecha</label><input type="date" id="rm-fecha"></div>
+            <div class="fg"><label>Tipo de registro</label>
+              <select id="rm-tipo">
+                <option value="entrada">Entrada</option>
+                <option value="alm-sal">Salida a almuerzo</option>
+                <option value="alm-reg">Regreso de almuerzo</option>
+                <option value="salida">Salida</option>
+              </select>
+            </div>
+            <div class="fg"><label>Hora del registro</label><input type="time" id="rm-hora"></div>
+            <div class="fg"><label>Motivo</label><input type="text" id="rm-motivo" placeholder="Ej: Fallo de cámara, error de reconocimiento facial..."></div>
+            <button class="btn-p" onclick="solicitarRegistroManual()">Enviar solicitud</button>
+            <div class="alert-ok" id="rm-ok"></div>
+          </div>
+          <div>
+            <div style="font-size:12px;font-weight:700;color:var(--azul);margin-bottom:8px;text-transform:uppercase;letter-spacing:.05em">Solicitudes enviadas</div>
+            <div id="rm-list"><div style="font-size:12px;color:var(--gris-m)">Sin solicitudes.</div></div>
+          </div>
+        </div>
+      </div>
     </div>
 
     <!-- HORAS EXTRA GERENTE -->
@@ -738,20 +765,21 @@ body{font-family:var(--font);background:var(--bg);min-height:100vh;color:#1a1a2e
       <div class="card">
         <div class="card-title">Reporte de nómina</div>
         <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;align-items:flex-end">
-          <div class="fg" style="margin-bottom:0;flex:1;min-width:120px"><label>Periodo</label>
-            <select id="rep-mes">
-              <option value="2026-06">Junio 2026</option>
-              <option value="2026-07">Julio 2026</option>
-              <option value="2026-08">Agosto 2026</option>
-              <option value="2026-09">Septiembre 2026</option>
-              <option value="2026-10">Octubre 2026</option>
-              <option value="2026-11">Noviembre 2026</option>
-              <option value="2026-12">Diciembre 2026</option>
-            </select></div>
+          <div class="fg" style="margin-bottom:0;flex:1;min-width:120px">
+            <label>Fecha inicio</label>
+            <input type="date" id="rep-fecha-ini">
+          </div>
+          <div class="fg" style="margin-bottom:0;flex:1;min-width:120px">
+            <label>Fecha fin</label>
+            <input type="date" id="rep-fecha-fin">
+          </div>
           <div class="fg" style="margin-bottom:0;flex:1;min-width:150px"><label>Tienda</label>
             <select id="rep-tienda"><option value="all">Todas las tiendas</option></select></div>
           <button class="btn-p" style="width:auto;margin-top:0;padding:8px 14px" onclick="generarReporte()">Generar</button>
-          <button class="btn-s" style="padding:8px 14px" onclick="exportarCSV()">📥 Exportar</button>
+          <div style="display:flex;gap:6px;flex-shrink:0">
+            <button class="btn-s" style="padding:8px 12px;font-size:11px" onclick="exportarCSV('compacto')">📥 Compacto</button>
+            <button class="btn-s" style="padding:8px 12px;font-size:11px" onclick="exportarCSV('pordia')">📥 Por día</button>
+          </div>
         </div>
         <div style="font-size:10px;color:var(--gris-m);margin-bottom:8px;line-height:1.6">
           <strong>Diurno:</strong> 6am–7pm · <strong>Nocturno:</strong> 7pm–6am · <strong>Jornada máxima:</strong> TC 42h · MT 21h · Gerentes D&amp;C
@@ -929,6 +957,9 @@ function buildNav(){
         const hoy=new Date().toISOString().split('T')[0];
         document.getElementById('reg-fecha').value=hoy;
         cargarRegistrosGerente();
+        await loadPersonal();
+        cargarSelectRegistroManual();
+        cargarListaRegistrosManuales();
       }
       if(t==='notificaciones')cargarNotificaciones();
       if(t==='malla')cargarMallasGuardadas();
@@ -2536,6 +2567,114 @@ window.rechazarExtra=async(id,btn)=>{
   btn.closest('.appr-btns').innerHTML=`<span style="font-size:11px;color:var(--rojo)">✗ Rechazada — ${motivo}</span>`;
 };
 
+// ── REGISTRO MANUAL ──
+async function cargarSelectRegistroManual(){
+  const sel=document.getElementById('rm-emp');if(!sel)return;
+  sel.innerHTML='<option value="">Seleccionar...</option>';
+  personalCache.forEach(p=>sel.innerHTML+=`<option value="${p.id}">${p.nombre} · ${p.cargo}</option>`);
+  // Fecha por defecto hoy
+  const hoy=new Date().toISOString().split('T')[0];
+  const rmFecha=document.getElementById('rm-fecha');
+  if(rmFecha&&!rmFecha.value)rmFecha.value=hoy;
+}
+
+window.solicitarRegistroManual=async()=>{
+  const empId=document.getElementById('rm-emp').value;
+  const fecha=document.getElementById('rm-fecha').value;
+  const tipo=document.getElementById('rm-tipo').value;
+  const hora=document.getElementById('rm-hora').value;
+  const motivo=document.getElementById('rm-motivo').value.trim();
+  if(!empId||!fecha||!hora||!motivo){alert('Completa todos los campos');return;}
+  const emp=personalCache.find(p=>p.id===empId);
+  const tipoLabel={'entrada':'Entrada','alm-sal':'Salida almuerzo','alm-reg':'Regreso almuerzo','salida':'Salida'}[tipo]||tipo;
+  await addDoc(collection(db,'registros-manuales'),{
+    empId,cedula:emp?.cedula||empId,nombre:emp?.nombre||empId,
+    tienda:curTienda,fecha,hora,tipo,tipoLabel,motivo,
+    estado:'pendiente',creadoPor:curUser.uid,timestamp:serverTimestamp()
+  });
+  showOk('rm-ok','✓ Solicitud enviada a la Directora de Operaciones.');
+  document.getElementById('rm-motivo').value='';
+  document.getElementById('rm-hora').value='';
+  cargarListaRegistrosManuales();
+};
+
+async function cargarListaRegistrosManuales(){
+  const list=document.getElementById('rm-list');if(!list)return;
+  const q=query(collection(db,'registros-manuales'),where('tienda','==',curTienda));
+  const snaps=await getDocs(q);
+  const items=[];snaps.forEach(d=>items.push({id:d.id,...d.data()}));
+  items.sort((a,b)=>b.fecha?.localeCompare(a.fecha||'')||0);
+  if(!items.length){list.innerHTML='<div style="font-size:12px;color:var(--gris-m)">Sin solicitudes.</div>';return;}
+  list.innerHTML='';
+  items.slice(0,8).forEach(r=>{
+    const pill=r.estado==='aprobada'?'p-ok':r.estado==='rechazada'?'p-rej':'p-pend';
+    const label=r.estado==='aprobada'?'Aprobado':r.estado==='rechazada'?'Rechazado':'Pendiente';
+    const div=document.createElement('div');div.className='appr-card';
+    div.innerHTML=`<div class="appr-head"><div><div class="appr-name">${r.nombre} · ${r.tipoLabel}</div><div class="appr-detail">${r.fecha} · ${r.hora} · ${r.motivo}</div></div><span class="pill ${pill}">${label}</span></div>`;
+    list.appendChild(div);
+  });
+}
+
+// En dashboard directora — registros manuales pendientes
+async function cargarRegistrosManualesDirectora(){
+  const ausDiv=document.getElementById('dash-aus');if(!ausDiv)return;
+  const q=query(collection(db,'registros-manuales'),where('estado','==','pendiente'));
+  const snaps=await getDocs(q);
+  if(snaps.empty)return;
+  snaps.forEach(d=>{
+    const r=d.data();
+    const card=document.createElement('div');card.className='appr-card';
+    card.style.borderLeft='3px solid var(--azul)';
+    card.innerHTML=`
+      <div class="appr-head">
+        <div>
+          <div class="appr-name">📝 Registro manual — ${r.nombre}</div>
+          <div class="appr-detail">${r.tienda} · ${r.fecha} · ${r.tipoLabel} · ${r.hora}<br><em>${r.motivo}</em></div>
+        </div>
+        <span class="pill p-pend">Pendiente</span>
+      </div>
+      <div class="appr-btns" style="margin-top:6px">
+        <button class="btn-sm-ok" onclick="aprobarRegistroManual('${d.id}','${r.cedula}','${r.nombre.replace(/'/g,"\\'")}','${r.fecha}','${r.hora}','${r.tipo}','${r.tienda}',this)">✓ Aprobar y registrar</button>
+        <button class="btn-sm-no" onclick="rechazarRegistroManual('${d.id}',this)">✗ Rechazar</button>
+      </div>`;
+    ausDiv.prepend(card);
+  });
+}
+
+window.aprobarRegistroManual=async(id,cedula,nombre,fecha,hora,tipo,tienda,btn)=>{
+  // Registrar en la colección de registros
+  await addDoc(collection(db,'registros'),{
+    cedula,nombre,tienda,tipo,hora,fecha,
+    verificado:true,manual:true,
+    timestamp:serverTimestamp()
+  });
+  await updateDoc(doc(db,'registros-manuales',id),{estado:'aprobada',aprobadoPor:curUser.uid});
+  // Notificación al gerente
+  await addDoc(collection(db,'notificaciones'),{
+    tienda,tipo:'registro-manual-aprobado',
+    mensaje:`✓ Registro manual aprobado para ${nombre} — ${fecha} ${hora}`,
+    fecha:new Date().toISOString(),leida:false,timestamp:serverTimestamp()
+  });
+  btn.closest('.appr-card').querySelector('.pill').className='pill p-ok';
+  btn.closest('.appr-card').querySelector('.pill').textContent='Aprobado';
+  btn.closest('.appr-btns').innerHTML='<span style="font-size:11px;color:var(--verde-t)">✓ Registro creado — gerente notificado</span>';
+};
+
+window.rechazarRegistroManual=async(id,btn)=>{
+  const motivo=prompt('Motivo del rechazo:');if(!motivo)return;
+  const snap=await getDoc(doc(db,'registros-manuales',id));
+  const r=snap.data();
+  await updateDoc(doc(db,'registros-manuales',id),{estado:'rechazada',motivoRechazo:motivo});
+  await addDoc(collection(db,'notificaciones'),{
+    tienda:r.tienda,tipo:'registro-manual-rechazado',
+    mensaje:`✗ Registro manual rechazado. Motivo: ${motivo}`,
+    fecha:new Date().toISOString(),leida:false,timestamp:serverTimestamp()
+  });
+  btn.closest('.appr-card').querySelector('.pill').className='pill p-rej';
+  btn.closest('.appr-card').querySelector('.pill').textContent='Rechazado';
+  btn.closest('.appr-btns').innerHTML=`<span style="font-size:11px;color:var(--rojo)">✗ Rechazado</span>`;
+};
+
 // ── MALLAS GUARDADAS ──
 async function cargarMallasGuardadas(){
   const list=document.getElementById('mallas-guardadas-list');
@@ -2861,6 +3000,7 @@ async function loadDashboard(){
   cargarAlertas();
   cargarRegistroDia();
   cargarExtrasDirectora();
+  cargarRegistrosManualesDirectora();
   const qm=query(collection(db,'mallas'),where('estado','==','pendiente'));
   const snapM=await getDocs(qm);
   document.getElementById('dm-mallas').textContent=snapM.size;
@@ -3072,6 +3212,14 @@ function loadTiendasSelect(){
   const sel=document.getElementById('rep-tienda');
   sel.innerHTML='<option value="all">Todas las tiendas</option>';
   TODAS_TIENDAS.forEach(t=>sel.innerHTML+=`<option value="${t}">${t}</option>`);
+  // Precargar rango del mes actual
+  const hoy=new Date();
+  const ini=new Date(hoy.getFullYear(),hoy.getMonth(),1).toISOString().split('T')[0];
+  const fin=hoy.toISOString().split('T')[0];
+  const iniEl=document.getElementById('rep-fecha-ini');
+  const finEl=document.getElementById('rep-fecha-fin');
+  if(iniEl&&!iniEl.value)iniEl.value=ini;
+  if(finEl&&!finEl.value)finEl.value=fin;
 }
 
 // ── HELPERS RECARGOS ──
@@ -3097,7 +3245,12 @@ function parse12to24Min(str){
 }
 
 window.generarReporte=async()=>{
-  const periodo=document.getElementById('rep-mes').value;
+  const fechaIni=document.getElementById('rep-fecha-ini').value;
+  const fechaFin=document.getElementById('rep-fecha-fin').value;
+  if(!fechaIni||!fechaFin){alert('Selecciona el rango de fechas');return;}
+  if(fechaFin<fechaIni){alert('La fecha fin debe ser posterior a la fecha inicio');return;}
+  // Guardar rango para export
+  window._repRango={ini:fechaIni,fin:fechaFin};
   const tiendaFiltro=document.getElementById('rep-tienda').value;
   const tbody=document.getElementById('rep-body');
   tbody.innerHTML='<tr><td colspan="15" style="text-align:center;padding:1rem;color:var(--gris-m)">Calculando...</td></tr>';
@@ -3114,26 +3267,26 @@ window.generarReporte=async()=>{
   // Mallas aprobadas del periodo
   const snapM=await getDocs(query(collection(db,'mallas'),where('estado','==','aprobada')));
   const mallasPeriodo=[];
-  const [anio,mes]=periodo.split('-').map(Number);
+  const fechaIniD=new Date(fechaIni+'T00:00:00');
+  const fechaFinD=new Date(fechaFin+'T23:59:59');
   snapM.forEach(d=>{
     const m={id:d.id,...d.data()};
     if(!m.semana)return;
     const semD=new Date(m.semana+'T12:00:00');
     const lun=new Date(semD);lun.setDate(semD.getDate()-((semD.getDay()+6)%7));
     const dom=new Date(lun);dom.setDate(lun.getDate()+6);
-    // Incluir si algún día de la semana cae en el mes del periodo
-    if((lun.getFullYear()===anio&&lun.getMonth()+1===mes)||(dom.getFullYear()===anio&&dom.getMonth()+1===mes))
+    // Incluir si hay overlap entre la semana y el rango
+    if(lun<=fechaFinD&&dom>=fechaIniD)
       mallasPeriodo.push({...m,_lunes:lun});
   });
 
-  // Registros reales del periodo
+  // Registros reales del rango
   const snapR=await getDocs(collection(db,'registros'));
   const registros={};
   snapR.forEach(d=>{
     const r=d.data();
     if(!r.fecha)return;
-    const [ry,rm]=r.fecha.split('-').map(Number);
-    if(ry!==anio||rm!==mes)return;
+    if(r.fecha<fechaIni||r.fecha>fechaFin)return;
     const k=r.cedula||r.nombre;
     if(!registros[k])registros[k]={};
     if(!registros[k][r.fecha])registros[k][r.fecha]={entrada:null,salida:null,almSal:null,almReg:null};
@@ -3149,7 +3302,7 @@ window.generarReporte=async()=>{
   const ausencias={};
   snapA.forEach(d=>{
     const a=d.data();if(!a.ini)return;
-    const [ay,am]=a.ini.split('-').map(Number);if(ay!==anio||am!==mes)return;
+    if(a.ini>fechaFin||a.fin<fechaIni)return;
     const k=a.cedula||a.empId;
     if(!ausencias[k])ausencias[k]={dias:0,tipos:[]};
     ausencias[k].dias+=a.dias||0;
@@ -3162,7 +3315,7 @@ window.generarReporte=async()=>{
   const extras={};
   snapE.forEach(d=>{
     const e=d.data();if(!e.fecha)return;
-    const [ey,em]=e.fecha.split('-').map(Number);if(ey!==anio||em!==mes)return;
+    if(e.fecha<fechaIni||e.fecha>fechaFin)return;
     const k=e.cedula;
     if(!extras[k])extras[k]=[];
     extras[k].push(e);
@@ -3278,17 +3431,58 @@ window.generarReporte=async()=>{
   });
 };
 
-window.exportarCSV=()=>{
-  const periodo=document.getElementById('rep-mes').value||'periodo';
-  const rows=[['Cédula','Nombre','Tienda','Tipo contrato','Hrs trabajadas','HRN','HRD','HED','HEN','HEDD','HEND','Días ausencia','Tipo ausencia','Faltas','% Asistencia']];
-  document.querySelectorAll('#rep-body tr').forEach(tr=>{
-    const cells=Array.from(tr.querySelectorAll('td')).map(td=>td.textContent.trim());
-    if(cells.length>3)rows.push(cells);
-  });
+window.exportarCSV=async(modo='compacto')=>{
+  const rango=window._repRango||{ini:'',fin:''};
+  const nombre=`nomina_AGC_${rango.ini}_${rango.fin}`;
+  if(modo==='compacto'){
+    // Una fila por persona con totales del rango
+    const rows=[['Cédula','Nombre','Tienda','Tipo contrato','Hrs trabajadas','HRN','HRD','HED','HEN','HEDD','HEND','Días ausencia','Tipo ausencia','Faltas','% Asistencia']];
+    document.querySelectorAll('#rep-body tr').forEach(tr=>{
+      const cells=Array.from(tr.querySelectorAll('td')).map(td=>td.textContent.trim());
+      if(cells.length>3)rows.push(cells);
+    });
+    descargarCSV(rows,nombre+'_compacto');
+  }else{
+    // Una fila por persona por día
+    const tiendaFiltro=document.getElementById('rep-tienda').value;
+    const rows=[['Fecha','Cédula','Nombre','Tienda','Tipo contrato','Entrada','Sal. alm.','Reg. alm.','Salida','Hrs trabajadas','Tardanza (min)','Manual','Estado']];
+    const snapR=await getDocs(collection(db,'registros'));
+    const regs=[];
+    snapR.forEach(d=>{
+      const r=d.data();
+      if(!r.fecha||r.fecha<rango.ini||r.fecha>rango.fin)return;
+      if(tiendaFiltro!=='all'&&r.tienda!==tiendaFiltro)return;
+      regs.push(r);
+    });
+    // Agrupar por persona y fecha
+    const porPF={};
+    regs.forEach(r=>{
+      const k=`${r.fecha}__${r.cedula||r.nombre}`;
+      if(!porPF[k])porPF[k]={fecha:r.fecha,cedula:r.cedula||'—',nombre:r.nombre,tienda:r.tienda,tipo:'—',entrada:'',almSal:'',almReg:'',salida:'',tardanza:0,manual:r.manual?'Sí':'No'};
+      if(r.tipo==='entrada'){porPF[k].entrada=r.hora;porPF[k].tardanza=r.tardanza||0;}
+      if(r.tipo==='alm-sal')porPF[k].almSal=r.hora;
+      if(r.tipo==='alm-reg')porPF[k].almReg=r.hora;
+      if(r.tipo==='salida')porPF[k].salida=r.hora;
+      if(r.manual)porPF[k].manual='Sí';
+    });
+    // Obtener tipo de contrato
+    const snapP=await getDocs(collection(db,'personal'));
+    const pers={};snapP.forEach(d=>{const p=d.data();pers[p.cedula||d.id]=p.tipo;});
+    Object.values(porPF).sort((a,b)=>a.fecha.localeCompare(b.fecha)||a.nombre.localeCompare(b.nombre)).forEach(r=>{
+      const tipo=pers[r.cedula]||'—';
+      // Calcular horas del día aproximadas
+      const hTrab=r.entrada&&r.salida?((new Date(`1970-01-01T${r.salida.replace(/\s?(am|pm)/i,'')}`)- new Date(`1970-01-01T${r.entrada.replace(/\s?(am|pm)/i,'')}`))/(1000*3600)).toFixed(2):'—';
+      rows.push([r.fecha,r.cedula,r.nombre,r.tienda,tipo,r.entrada||'—',r.almSal||'—',r.almReg||'—',r.salida||'—',hTrab,r.tardanza||'—',r.manual,'Verificado']);
+    });
+    descargarCSV(rows,nombre+'_por_dia');
+  }
+};
+
+function descargarCSV(rows,nombre){
   const csv=rows.map(r=>r.join(';')).join('\n');
   const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);
-  a.download=`nomina_AGC_${periodo}.csv`;a.click();
+  a.download=`${nombre}.csv`;a.click();
 };
 
 
