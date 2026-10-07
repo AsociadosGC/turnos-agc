@@ -3028,11 +3028,11 @@ async function loadDashboard(){
   if(sel&&sel.options.length===1){
     TODAS_TIENDAS.forEach(t=>sel.innerHTML+=`<option value="${t}">${t}</option>`);
   }
-  // Cargar alertas y registro del día
-  cargarAlertas();
-  cargarRegistroDia();
-  cargarExtrasDirectora();
-  cargarRegistrosManualesDirectora();
+  // Cargar secciones en orden secuencial para evitar condiciones de carrera
+  await cargarAlertas();
+  await cargarRegistroDia();
+  await cargarExtrasDirectora();
+  await cargarRegistrosManualesDirectora();
   const qm=query(collection(db,'mallas'),where('estado','==','pendiente'));
   const snapM=await getDocs(qm);
   document.getElementById('dm-mallas').textContent=snapM.size;
