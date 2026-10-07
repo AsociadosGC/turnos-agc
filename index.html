@@ -3271,9 +3271,11 @@ window.generarReporte=async()=>{
   const personal={};
   snapP.forEach(d=>{const p={...d.data(),id:d.id};personal[p.cedula||d.id]=p;personal[d.id]=p;});
 
+  // Cargar TODOS los turnos maestros de todas las tiendas
   const snapT=await getDocs(collection(db,'turnos-maestros'));
   const turnos={};
   snapT.forEach(d=>turnos[d.id]={...d.data(),id:d.id});
+  console.log('Turnos cargados:',Object.keys(turnos).length);
 
   // Mallas aprobadas del periodo
   const snapM=await getDocs(query(collection(db,'mallas'),where('estado','==','aprobada')));
@@ -3352,7 +3354,8 @@ window.generarReporte=async()=>{
       const res=resultado[k];
 
       Object.entries(dias).forEach(([col,turnoId])=>{
-        const fechaDia=new Date(m._lunes);fechaDia.setDate(m._lunes.getDate()+parseInt(col));
+        // Clonar _lunes correctamente para no mutar el original
+        const fechaDia=new Date(m._lunes.getTime());fechaDia.setDate(m._lunes.getDate()+parseInt(col));
         const fechaStr=fechaDia.toISOString().split('T')[0];
         if(fechaStr<fechaIni||fechaStr>fechaFin)return;
         const jsDay=colToJsDay(parseInt(col));
@@ -3411,10 +3414,21 @@ window.generarReporte=async()=>{
     if(resultado[ced]){resultado[ced].diasAus+=a.dias;resultado[ced].tiposAus.push(...a.tipos);}
   });
 
+  // Diagnóstico
+  console.log('Mallas periodo:',mallasPeriodo.length);
+  console.log('Registros personas:',Object.keys(registros).length);
+  console.log('Resultado personas:',Object.keys(resultado).length);
+
   // Renderizar
   tbody.innerHTML='';
   const filas=Object.values(resultado).filter(r=>tiendaFiltro==='all'||r.tienda===tiendaFiltro);
-  if(!filas.length){tbody.innerHTML='<tr><td colspan="15" style="text-align:center;padding:1.5rem;color:var(--gris-m);font-size:12px">Sin registros para el período seleccionado.</td></tr>';return;}
+  if(!filas.length){
+    const diagMsg=mallasPeriodo.length===0
+      ?'No hay mallas aprobadas para este rango de fechas. Verifica que la malla de la semana esté aprobada.'
+      :'Sin registros procesados. Verifica en la consola del navegador (F12) para más detalle.';
+    tbody.innerHTML=`<tr><td colspan="15" style="text-align:center;padding:1.5rem;color:var(--gris-m);font-size:12px">${diagMsg}</td></tr>`;
+    return;
+  }
   const rnd=v=>v>0?+(v.toFixed(2)):null;
   const fmt=v=>v!=null?v:'—';
   filas.forEach(r=>{
