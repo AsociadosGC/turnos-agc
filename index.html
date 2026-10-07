@@ -3353,9 +3353,8 @@ window.generarReporte=async()=>{
 
       Object.entries(dias).forEach(([col,turnoId])=>{
         const fechaDia=new Date(m._lunes);fechaDia.setDate(m._lunes.getDate()+parseInt(col));
-        const [fy,fm]=fechaDia.toISOString().split('T')[0].split('-').map(Number);
-        if(fy!==anio||fm!==mes)return;
         const fechaStr=fechaDia.toISOString().split('T')[0];
+        if(fechaStr<fechaIni||fechaStr>fechaFin)return;
         const jsDay=colToJsDay(parseInt(col));
         const esDiaDesc=diaDescanso!==null&&jsDay===diaDescanso;
 
