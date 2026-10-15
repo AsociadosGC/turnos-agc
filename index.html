@@ -391,8 +391,6 @@ body{font-family:var(--font);background:var(--bg);min-height:100vh;color:#1a1a2e
             <div class="k-sec">Tipo de registro</div>
             <div class="reg-btns">
               <button class="rb sel" id="rb-entrada" onclick="selTipo('entrada',this)">↓ Entrada</button>
-              <button class="rb" id="rb-alm-sal" onclick="selTipo('alm-sal',this)">🍽 Sal. almuerzo</button>
-              <button class="rb" id="rb-alm-reg" onclick="selTipo('alm-reg',this)">↩ Reg. almuerzo</button>
               <button class="rb" id="rb-salida" onclick="selTipo('salida',this)">↑ Salida</button>
             </div>
             <div class="turno-badge" id="k-tbadge"></div>
@@ -1805,7 +1803,22 @@ window.selEmp=async(id,data,btn)=>{
   }
 };
 
-window.selTipo=(t,btn)=>{curTipo=t;document.querySelectorAll('.rb').forEach(b=>b.classList.remove('sel'));btn.classList.add('sel');};
+window.selTipo=(t,btn)=>{
+  curTipo=t;
+  document.querySelectorAll('.rb').forEach(b=>b.classList.remove('sel'));
+  btn.classList.add('sel');
+  // Mostrar info de almuerzo automático si hay turno cargado
+  const alertEl=document.getElementById('k-alert');
+  if(t==='salida'&&curEmpData?._turnoHoy?.tieneAlm==='si'){
+    alertEl.className='k-alert';
+    alertEl.style.background='var(--az-c)';
+    alertEl.style.color='var(--az-t)';
+    alertEl.textContent=`El tiempo de almuerzo (${curEmpData._turnoHoy.durAlm}h programadas) se descontará automáticamente de las horas trabajadas.`;
+    alertEl.style.display='block';
+  } else {
+    alertEl.style.display='none';
+  }
+};
 
 window.kNext=async()=>{
   if(!curEmpData)return;
@@ -1975,7 +1988,7 @@ window.kScan=async()=>{
 
       // Comparar descriptores (umbral 0.5 — menor = más parecido)
       const distancia=faceapi.euclideanDistance(refDetection.descriptor,liveDetection.descriptor);
-      ok=distancia<0.5;
+      ok=distancia<0.6;
       if(!ok)motivoFallo=`El rostro no coincide con el perfil registrado (dist: ${distancia.toFixed(2)}).`;
     } else {
       // Sin Face-api — verificación simulada (acepta siempre)
@@ -2039,6 +2052,8 @@ window.kScan=async()=>{
       if(minTarde>5) tardanzaMsg=` · ⚠ ${minTarde} min tarde`;
     }
     document.getElementById('k-res-detail').textContent=curEmpData.nombre+' · '+tStr+' · '+gpsResult.mensaje+tardanzaMsg;
+    // Calcular descuento automático de almuerzo si es salida
+    const durAlmuerzoH = curTipo==='salida'&&turnoHoy?.tieneAlm==='si'?(turnoHoy.durAlm||0):0;
     await addDoc(collection(db,'registros'),{
       cedula:curEmpData.cedula||curEmpData.id,
       nombre:curEmpData.nombre,
@@ -2049,7 +2064,8 @@ window.kScan=async()=>{
       verificado:true,
       tardanza:curTipo==='entrada'&&turnoHoy?Math.max(0,now24()-parseT(turnoHoy.entrada)):0,
       turnoEntrada:turnoHoy?.entrada||null,
-      turnSalida:turnoHoy?.salida||null,
+      turnoSalida:turnoHoy?.salida||null,
+      almuerzoDescontado:durAlmuerzoH,
       timestamp:serverTimestamp()
     });
     // Actualizar banner tardanzas del gerente
@@ -2119,7 +2135,8 @@ window.kReset=()=>{
   document.getElementById('ks-sel').style.display='block';
   document.querySelectorAll('.emp-btn').forEach(b=>b.classList.remove('sel'));
   document.querySelectorAll('.rb').forEach(b=>b.classList.remove('sel'));
-  document.getElementById('rb-entrada').classList.add('sel');
+  const rbEntrada=document.getElementById('rb-entrada');
+  if(rbEntrada)rbEntrada.classList.add('sel');
   document.getElementById('k-btn-next').disabled=true;
   document.getElementById('k-btn-scan').disabled=false;
   document.getElementById('k-tbadge').style.display='none';
