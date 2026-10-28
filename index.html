@@ -745,12 +745,12 @@ body{font-family:var(--font);background:var(--bg);min-height:100vh;color:#1a1a2e
         </div>
         <div id="mes-aviso" style="margin-bottom:8px"></div>
         <div style="font-size:10px;color:var(--gris-m);margin-bottom:8px;line-height:1.6">
-          <span style="background:#f0fff8;color:var(--verde-t);padding:1px 6px;border-radius:4px">8a-5p turno</span>
+          <span style="background:#f0fff8;color:var(--verde-t);padding:1px 6px;border-radius:4px">8 = horas del turno (sin almuerzo)</span>
           <span style="background:var(--am-c);color:var(--am-t);padding:1px 6px;border-radius:4px">D descanso</span>
           <span style="background:#efe9ff;color:#4c3a9e;padding:1px 6px;border-radius:4px">C compensatorio</span>
           <span style="background:var(--az-c);color:var(--az-t);padding:1px 6px;border-radius:4px">INC / VAC / PER</span>
           <span style="background:#fff0f0;color:#8b0000;padding:1px 6px;border-radius:4px">trabaja su día de descanso (dominical)</span>
-          · Borde punteado = malla aún no aprobada · Encabezado dorado = lunes festivo
+          · Pasa el mouse por una celda para ver el horario · Borde punteado = malla aún no aprobada · Encabezado dorado = lunes festivo
         </div>
         <div style="overflow-x:auto;max-height:70vh" id="mes-wrap"><div style="font-size:12px;color:var(--gris-m)">Selecciona el mes.</div></div>
       </div>
@@ -2381,7 +2381,8 @@ window.cargarVistaMes=async()=>{
           else if(v==='COMPENSATORIO'){txt='C';bg='#efe9ff';col='#4c3a9e';tip='Descanso compensatorio';}
           else if(['INCAPACIDAD','VACACIONES','PERMISO'].includes(v)){txt=v.substring(0,3);bg='var(--az-c)';col='var(--az-t)';tip=v;}
           else if(t){
-            txt=abrevTurno(t);total+=t.horas||0;
+            const hh=Math.round((t.horas||0)*100)/100;
+            txt=String(hh);total+=hh;
             const esDom=diaDesc!==null&&f.getDay()===diaDesc;
             bg=esDom?'#fff0f0':'#f0fff8';col=esDom?'#8b0000':'var(--verde-t)';
             tip=`${t.nombre} · ${fmt12(t.entrada)}–${fmt12(t.salida)}${t.tieneAlm==='si'?` · alm ${fmt12(t.salAlm)} (${t.durAlm}h)`:''} · ${t.horas}h${esDom?' · día de descanso asignado (dominical)':''}`;
