@@ -1703,21 +1703,21 @@ async function marcarAusenciaEnMalla(empId,ini,fin,tipoMalla){
 
 // ── COORDENADAS GPS POR TIENDA ──
 const GPS_TIENDAS={
-  'A87 Sahagun':  {lat:8.9479793,  lng:-75.4439275, nombre:'Sahagún'},
-  '952 Granada':  {lat:3.5437537,  lng:-73.7079191, nombre:'Granada'},
-  // Resto de tiendas — agregar coordenadas antes del piloto
-  'B54 Montelibano':       {lat:null,lng:null},
-  'B55 Caucasia':          {lat:null,lng:null},
-  'B71 Centro Suba':       {lat:null,lng:null},
-  'B88 Magangue':          {lat:null,lng:null},
-  'B99 Corozal':           {lat:null,lng:null},
-  'V01 Plato':             {lat:null,lng:null},
-  'V89 San Marcos':        {lat:null,lng:null},
-  'V90 Simijaca':          {lat:null,lng:null},
-  'V95 Chiquinquira':      {lat:null,lng:null},
-  '5430 Velez Acacias':    {lat:null,lng:null},
-  '5432 Velez Chiquinquira':{lat:null,lng:null},
-  '5188 Velez Granada':    {lat:null,lng:null}
+  // Coordenadas obtenidas de la dirección de cada punto de venta (Google Maps) — octubre 2026
+  '952 Granada':            {lat:3.5437538,  lng:-73.7079191, dir:'Cra 13 #17-40, Granada (Meta)'},
+  'A87 Sahagun':            {lat:8.9479793,  lng:-75.4439275, dir:'Cl 15 #9-25, Sahagún (Córdoba)'},
+  'B54 Montelibano':        {lat:7.9818984,  lng:-75.4224463, dir:'Cl Antioquia #16-14 Local 7, Montelíbano (Córdoba)'},
+  'B55 Caucasia':           {lat:7.9928068,  lng:-75.1995548, dir:'Cra 20 #27-75, Caucasia (Antioquia)'},
+  'B71 Centro Suba':        {lat:4.7374848,  lng:-74.0857296, dir:'C.C. Centro Suba Local 9-004, Cl 140 #91-19, Bogotá'},
+  'B88 Magangue':           {lat:9.2304676,  lng:-74.7439659, dir:'Cra 3 #11-37, Magangué (Bolívar)'},
+  'B99 Corozal':            {lat:9.3145592,  lng:-75.2932119, dir:'Cl 29 #24-60, Corozal (Sucre)'},
+  'V01 Plato':              {lat:9.7902625,  lng:-74.7845657, dir:'Cra 15 #8-50, Plato (Magdalena)'},
+  'V89 San Marcos':         {lat:8.6566692,  lng:-75.1306517, dir:'Cl 15 #24-37, San Marcos (Sucre)'},
+  'V90 Simijaca':           {lat:5.5036193,  lng:-73.8521391, dir:'Cra 7 #8-51, Simijaca (Cundinamarca)'},
+  'V95 Chiquinquira':       {lat:5.6171969,  lng:-73.8159279, dir:'Cra 10 #17-34, Chiquinquirá (Boyacá)'},
+  '5430 Velez Acacias':     {lat:3.986557,   lng:-73.759916,  dir:'Cl 14 #16-39, Acacías (Meta)'},
+  '5432 Velez Chiquinquira':{lat:5.616496,   lng:-73.816997,  dir:'Cl 16 #10-31, Chiquinquirá (Boyacá)'},
+  '5188 Velez Granada':     {lat:3.5427079,  lng:-73.7081,    dir:'Cl 17 #13-71, Granada (Meta)'}
 };
 const GPS_RADIO_METROS=200;
 
