@@ -304,8 +304,6 @@ body{font-family:var(--font);background:var(--bg);min-height:100vh;color:#1a1a2e
       </div>
       <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
         <button class="btn-p" id="btn-activar-cam" onclick="activarCamaraFoto()" style="width:auto;padding:8px 16px">📷 Tomar con cámara</button>
-        <button class="btn-s" id="btn-subir-archivo" onclick="document.getElementById('foto-file-input').click()">📁 Subir desde archivo</button>
-        <input type="file" id="foto-file-input" accept="image/*" style="display:none" onchange="cargarFotoArchivo(event)">
         <button class="btn-s" id="btn-tomar-foto" onclick="tomarFoto()" style="display:none">Tomar foto</button>
         <button class="btn-s" id="btn-repetir-foto" onclick="repetirFoto()" style="display:none">Repetir</button>
         <button class="btn-p" id="btn-guardar-foto" onclick="guardarFotoReferencia()" style="display:none;width:auto;padding:8px 16px">💾 Guardar foto</button>
@@ -1884,10 +1882,9 @@ window.abrirModalFoto=async(empId,nombre)=>{
   document.getElementById('foto-preview').style.display='none';
   document.getElementById('foto-ok').style.display='none';
   document.getElementById('btn-activar-cam').style.display='inline-flex';
-  document.getElementById('btn-subir-archivo').style.display='inline-flex';
   document.getElementById('btn-tomar-foto').style.display='none';
   document.getElementById('btn-repetir-foto').style.display='none';
-  document.getElementById('btn-guardar-foto').style.display='none';
+  const gf=document.getElementById('btn-guardar-foto');gf.style.display='none';gf.disabled=false;gf.textContent='💾 Guardar foto';
   document.getElementById('foto-video').style.display='none';
   document.getElementById('modal-foto').classList.add('open');
 };
@@ -1898,34 +1895,12 @@ window.cerrarModalFoto=()=>{
   document.getElementById('modal-foto').classList.remove('open');
 };
 
-window.cargarFotoArchivo=(event)=>{
-  const file=event.target.files[0];
-  if(!file)return;
-  const reader=new FileReader();
-  reader.onload=e=>{
-    const dataUrl=e.target.result;
-    document.getElementById('foto-preview-img').src=dataUrl;
-    document.getElementById('foto-preview').style.display='block';
-    document.getElementById('btn-activar-cam').style.display='none';
-    document.getElementById('btn-subir-archivo').style.display='none';
-    document.getElementById('btn-tomar-foto').style.display='none';
-    document.getElementById('btn-repetir-foto').style.display='inline-flex';
-    document.getElementById('btn-guardar-foto').style.display='inline-flex';
-    document.getElementById('foto-video').style.display='none';
-    detenerCamara(streamFoto);streamFoto=null;
-  };
-  reader.readAsDataURL(file);
-  // Limpiar input para permitir volver a seleccionar el mismo archivo
-  event.target.value='';
-};
-
 window.activarCamaraFoto=async()=>{
   const video=document.getElementById('foto-video');
   streamFoto=await activarCamara(video);
   if(!streamFoto)return;
   video.style.display='block';
   document.getElementById('btn-activar-cam').style.display='none';
-  document.getElementById('btn-subir-archivo').style.display='none';
   document.getElementById('btn-tomar-foto').style.display='inline-flex';
 };
 
@@ -1951,7 +1926,7 @@ window.repetirFoto=async()=>{
   document.getElementById('btn-repetir-foto').style.display='none';
   document.getElementById('btn-guardar-foto').style.display='none';
   document.getElementById('btn-activar-cam').style.display='inline-flex';
-  document.getElementById('btn-subir-archivo').style.display='inline-flex';
+  await activarCamaraFoto();
 };
 
 window.guardarFotoReferencia=async()=>{
