@@ -502,9 +502,11 @@ body{font-family:var(--font);background:var(--bg);min-height:100vh;color:#1a1a2e
               <div class="fg"><label>Sal. almuerzo</label><input type="time" id="t-sal-alm" value="12:00" oninput="calcHorasTurno()"></div>
               <div class="fg"><label>Duración</label>
                 <select id="t-dur-alm" onchange="calcHorasTurno()">
-                  <option value="1">1 hora</option>
-                  <option value="1.5">1.5 horas</option>
+                  <option value="0.5">30 minutos</option>
+                  <option value="1" selected>1 hora</option>
+                  <option value="1.5">1,5 horas</option>
                   <option value="2">2 horas</option>
+                  <option value="2.5">2,5 horas</option>
                 </select></div>
             </div>
           </div>
@@ -984,6 +986,19 @@ function evaluarJornadaKiosk({ahora,tipo,empId,mallas,turnos,registrosHoy}){
     tardanzaMin:tipo==='entrada'?Math.max(0,nowMin-ini):0,minTardeSalida:tipo==='salida'?Math.max(0,nowMin-fin):0};
 }
 
+// ── AYUDANTES DE TEXTO SEGURO ──
+// escH: texto para mostrar dentro de HTML. jsArg: texto como argumento de un onclick (soporta comillas, barras, saltos de línea).
+const escH=t=>String(t==null?'':t).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const jsArg=t=>JSON.stringify(String(t==null?'':t)).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+// ── ALMUERZO ──
+const fmtDurAlm=h=>{h=Number(h)||0;return h===0.5?'30 min':(Number.isInteger(h)?h:String(h).replace('.',','))+'h';};
+// Una hora cuenta como "en almuerzo" si la persona está ausente más de la mitad de esa hora
+function horaEnAlmuerzo(t,h){
+  if(!t||t.tieneAlm!=='si'||!t.salAlm)return false;
+  const ini=parseT(t.salAlm),fin=ini+(t.durAlm||0)*60;
+  return Math.min(fin,(h+1)*60)-Math.max(ini,h*60)>30;
+}
+
 const H_DIURNO_FIN_MIN=19*60; // 7pm
 const H_NOC_FIN_MIN=6*60;     // 6am
 
@@ -1201,8 +1216,8 @@ async function loadPersonal(){
         <div class="p-sub">CC ${p.cedula||p.id} · Desactivado${fecha?' el '+fecha:''}</div>
       </div>
       <div style="display:flex;gap:4px;flex-shrink:0">
-        <button class="btn-deact" style="color:var(--verde-t);border-color:var(--verde-t)" onclick="reactivar('${p.id}','${p.nombre.replace(/'/g,"\\'")}')">↩ Reactivar</button>
-        <button class="btn-deact" style="color:var(--rojo);border-color:var(--rojo)" onclick="eliminarPersona('${p.id}','${p.nombre.replace(/'/g,"\\'")}')">🗑 Eliminar</button>
+        <button class="btn-deact" style="color:var(--verde-t);border-color:var(--verde-t)" onclick="reactivar('${p.id}',${jsArg(p.nombre)})">↩ Reactivar</button>
+        <button class="btn-deact" style="color:var(--rojo);border-color:var(--rojo)" onclick="eliminarPersona('${p.id}',${jsArg(p.nombre)})">🗑 Eliminar</button>
       </div>`;
     inactivoList.appendChild(row);
   });
@@ -1251,11 +1266,11 @@ function renderEquipoList(){
       </div>
       <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0">
         <span class="pill ${p.cargo==='GERENTE'?'p-ger':p.tipo==='TC'||esOtrosi?'p-tc':'p-mt'}">${esOtrosi?'Otrosí TC':p.tipo}</span>
-        <button class="btn-deact" style="color:var(--azul);border-color:var(--azul)" onclick="abrirModalFoto('${p.id}','${p.nombre.replace(/'/g,"\\'")}')">📷 ${tieneFoto?'Actualizar foto':'Registrar foto'}</button>
+        <button class="btn-deact" style="color:var(--azul);border-color:var(--azul)" onclick="abrirModalFoto('${p.id}',${jsArg(p.nombre)})">📷 ${tieneFoto?'Actualizar foto':'Registrar foto'}</button>
         ${p.bloqueado?`<span class="pill p-rej">🔒 Bloqueado</span>`:''}
-        <button class="btn-deact" style="color:var(--verde-t);border-color:var(--verde-t)" onclick="editarPersona('${p.id}','${p.nombre.replace(/'/g,"\\'")}','${p.cargo}','${p.tipo}')">✏ Editar</button>
-        <button class="btn-deact" style="color:var(--am-t);border-color:var(--am-t)" onclick="desactivar('${p.id}','${p.nombre.replace(/'/g,"\\'")}')">⏸ Desactivar</button>
-        <button class="btn-deact" style="color:var(--rojo);border-color:var(--rojo)" onclick="eliminarPersona('${p.id}','${p.nombre.replace(/'/g,"\\'")}')">🗑 Eliminar</button>
+        <button class="btn-deact" style="color:var(--verde-t);border-color:var(--verde-t)" onclick="editarPersona('${p.id}',${jsArg(p.nombre)},'${p.cargo}','${p.tipo}')">✏ Editar</button>
+        <button class="btn-deact" style="color:var(--am-t);border-color:var(--am-t)" onclick="desactivar('${p.id}',${jsArg(p.nombre)})">⏸ Desactivar</button>
+        <button class="btn-deact" style="color:var(--rojo);border-color:var(--rojo)" onclick="eliminarPersona('${p.id}',${jsArg(p.nombre)})">🗑 Eliminar</button>
       </div>`;
     list.appendChild(row);
   });
@@ -1446,7 +1461,7 @@ function renderTurnos(){
   if(turnosCache.length===0){list.innerHTML='<div style="font-size:12px;color:var(--gris-m)">Sin turnos configurados. Crea el primero.</div>';return;}
   list.innerHTML='';
   turnosCache.forEach(t=>{
-    const alm=t.tieneAlm==='si'?` · Alm ${fmt12(t.salAlm)} (${t.durAlm}h)`:'· Sin alm.';
+    const alm=t.tieneAlm==='si'?` · Alm ${fmt12(t.salAlm)} (${fmtDurAlm(t.durAlm)})`:'· Sin alm.';
     const row=document.createElement('div');row.className='turno-row';
     row.innerHTML=`<div class="t-name">${t.nombre}</div><div class="t-hours">${fmt12(t.entrada)} – ${fmt12(t.salida)}${alm} · <strong>${t.horas}h</strong></div><button class="btn-deact" onclick="eliminarTurno('${t.id}')">Eliminar</button>`;
     list.appendChild(row);
@@ -1565,7 +1580,7 @@ window.generarMalla=async(mallaIdEditar=null)=>{
   // Formato: NOMBRE / 8am–5pm | alm 12pm (1h)
   const fmtTurnoOpt=t=>{
     const base=`${fmt12(t.entrada)}–${fmt12(t.salida)}`;
-    const alm=t.tieneAlm==='si'?` | alm ${fmt12(t.salAlm)} (${t.durAlm}h)`:'';
+    const alm=t.tieneAlm==='si'?` | alm ${fmt12(t.salAlm)} (${fmtDurAlm(t.durAlm)})`:'';
     return `${t.nombre} / ${base}${alm}`;
   };
   const optsTurnos=turnosCache.map(t=>`<option value="${t.id}">${fmtTurnoOpt(t)}</option>`).join('');
@@ -1978,7 +1993,7 @@ window.selTipo=(t,btn)=>{
     alertEl.className='k-alert';
     alertEl.style.background='var(--az-c)';
     alertEl.style.color='var(--az-t)';
-    alertEl.textContent=`El tiempo de almuerzo (${curEmpData._turnoHoy.durAlm}h programadas) se descontará automáticamente de las horas trabajadas.`;
+    alertEl.textContent=`El tiempo de almuerzo (${fmtDurAlm(curEmpData._turnoHoy.durAlm)} programados) se descontará automáticamente de las horas trabajadas.`;
     alertEl.style.display='block';
   } else {
     alertEl.style.display='none';
@@ -1988,14 +2003,17 @@ window.selTipo=(t,btn)=>{
 async function registrosDelDia(emp){
   try{
     const ahora=new Date(),hoyLocal=isoDate(ahora),hoyUTC=ahora.toISOString().split('T')[0];
-    const snaps=await getDocs(query(collection(db,'registros'),where('cedula','==',emp.cedula||emp.id),where('fecha','in',[...new Set([hoyLocal,hoyUTC])])));
+    const fechas=[...new Set([hoyLocal,hoyUTC])];
+    const base=emp.cedula||emp.id;
+    const claves=[...new Set([base,String(base),...(isNaN(Number(base))?[]:[Number(base)])])];   // texto y número
+    const grupos=await Promise.all(claves.map(c=>getDocs(query(collection(db,'registros'),where('cedula','==',c),where('fecha','in',fechas)))));
     const out=[];
-    snaps.forEach(d=>{
+    grupos.forEach(snaps=>snaps.forEach(d=>{
       const r=d.data();if(r.verificado===false)return;
       let f=r.fecha;
       if(!r.manual&&r.timestamp&&r.timestamp.toDate)f=isoDate(r.timestamp.toDate());
       if(f===hoyLocal)out.push({tipo:r.tipo,hora:r.hora});
-    });
+    }));
     return out;
   }catch(e){console.warn('[kiosk] no se pudieron leer los registros del día',e);return null;}
 }
@@ -2536,7 +2554,7 @@ function calcularDotacion(){
       const hRegAlm=turno.tieneAlm==='si'?hSalAlm+Math.ceil(turno.durAlm):-1;
 
       for(let h=hEntrada;h<hSalida;h++){
-        if(h===hSalAlm)continue; // en almuerzo
+        if(horaEnAlmuerzo(turno,h))continue; // en almuerzo
         if(dotacionData[h]){
           dotacionData[h].total++;
           if(esGer)dotacionData[h].ger++;
@@ -2593,7 +2611,7 @@ function renderDotacion(filtro){
       const hAlmSal=turno.tieneAlm==='si'?parseInt(turno.salAlm.split(':')[0]):-1;
       const nombreCorto=p.nombre.split(' ').slice(0,2).join(' ');
       for(let h=hEnt;h<hSal;h++){
-        if(h===hAlmSal)continue;
+        if(horaEnAlmuerzo(turno,h))continue;
         if(porDiaHora[col][h]){
           porDiaHora[col][h].total++;
           if(esGer)porDiaHora[col][h].ger++;
@@ -2770,7 +2788,7 @@ function generarTablaDotModal(data,personal,turnos,filtro){
       const hSal=parseInt(t.salida.split(':')[0]);
       const hAlm=t.tieneAlm==='si'?parseInt(t.salAlm.split(':')[0]):-1;
       for(let h=hEnt;h<hSal;h++){
-        if(h===hAlm)continue;
+        if(horaEnAlmuerzo(t,h))continue;
         if(porDiaHora[col][h]){
           porDiaHora[col][h].total++;
           if(esGer)porDiaHora[col][h].ger++;
@@ -3183,9 +3201,8 @@ async function cargarListaRegistrosManuales(){
 // En dashboard directora — registros manuales pendientes
 async function cargarRegistrosManualesDirectora(){
   const div=document.getElementById('dash-reg-manuales');if(!div)return;
+  const snaps=await getDocs(query(collection(db,'registros-manuales'),where('estado','==','pendiente')));
   div.innerHTML='';
-  const q=query(collection(db,'registros-manuales'),where('estado','==','pendiente'));
-  const snaps=await getDocs(q);
   if(snaps.empty){
     div.innerHTML='<div style="font-size:12px;color:var(--gris-m)">Sin solicitudes de registro manual.</div>';
     return;
@@ -3197,54 +3214,74 @@ async function cargarRegistrosManualesDirectora(){
     card.innerHTML=`
       <div class="appr-head">
         <div>
-          <div class="appr-name">${r.nombre}</div>
+          <div class="appr-name">${escH(r.nombre)}</div>
           <div class="appr-detail">
-            ${r.tienda} · ${r.fecha} · <strong>${r.tipoLabel}</strong> · ${r.hora}<br>
-            <em>${r.motivo}</em>
+            ${escH(r.tienda)} · ${escH(r.fecha)} · <strong>${escH(r.tipoLabel||r.tipo)}</strong> · ${escH(r.hora)}<br>
+            <em>${escH(r.motivo)}</em>
           </div>
         </div>
         <span class="pill p-pend">Pendiente</span>
       </div>
       <div class="appr-btns" style="margin-top:6px">
-        <button class="btn-sm-ok" onclick="aprobarRegistroManual('${d.id}','${r.cedula||r.empId}','${r.nombre.replace(/'/g,"\\'")}','${r.fecha}','${r.hora}','${r.tipo}','${r.tienda}',this)">✓ Aprobar y registrar</button>
-        <button class="btn-sm-no" onclick="rechazarRegistroManual('${d.id}',this)">✗ Rechazar</button>
+        <button class="btn-sm-ok" data-id="${escH(d.id)}" onclick="aprobarRegistroManual(this)">✓ Aprobar y registrar</button>
+        <button class="btn-sm-no" data-id="${escH(d.id)}" onclick="rechazarRegistroManual(this)">✗ Rechazar</button>
       </div>`;
     div.appendChild(card);
   });
 }
 
-window.aprobarRegistroManual=async(id,cedula,nombre,fecha,hora,tipo,tienda,btn)=>{
-  // Registrar en la colección de registros
-  await addDoc(collection(db,'registros'),{
-    cedula,nombre,tienda,tipo,hora,fecha,
-    verificado:true,manual:true,
-    timestamp:serverTimestamp()
-  });
-  await updateDoc(doc(db,'registros-manuales',id),{estado:'aprobada',aprobadoPor:curUser.uid});
-  // Notificación al gerente
-  await addDoc(collection(db,'notificaciones'),{
-    tienda,tipo:'registro-manual-aprobado',
-    mensaje:`✓ Registro manual aprobado para ${nombre} — ${fecha} ${hora}`,
-    fecha:new Date().toISOString(),leida:false,timestamp:serverTimestamp()
-  });
-  btn.closest('.appr-card').querySelector('.pill').className='pill p-ok';
-  btn.closest('.appr-card').querySelector('.pill').textContent='Aprobado';
-  btn.closest('.appr-btns').innerHTML='<span style="font-size:11px;color:var(--verde-t)">✓ Registro creado — gerente notificado</span>';
+// Los datos se leen de la solicitud guardada (no del botón), así ningún carácter raro en un nombre impide aprobar.
+window.aprobarRegistroManual=async(btn)=>{
+  const id=btn.dataset.id,card=btn.closest('.appr-card'),botones=btn.closest('.appr-btns'),textoOriginal=btn.textContent;
+  btn.disabled=true;btn.textContent='Registrando...';
+  try{
+    const snap=await getDoc(doc(db,'registros-manuales',id));
+    if(!snap.exists())throw new Error('la solicitud ya no existe');
+    const r=snap.data();
+    if(r.estado&&r.estado!=='pendiente')throw new Error('esta solicitud ya fue '+r.estado);
+    const nombre=r.nombre||'',tienda=r.tienda||'';
+    // Identificador fijo: si se vuelve a intentar, el registro no se duplica
+    await setDoc(doc(db,'registros','manual_'+id),{
+      cedula:r.cedula!=null?r.cedula:(r.empId||''),nombre,tienda,tipo:r.tipo||'',hora:r.hora||'',fecha:r.fecha||'',
+      verificado:true,manual:true,solicitudManual:id,timestamp:serverTimestamp()
+    });
+    await updateDoc(doc(db,'registros-manuales',id),{estado:'aprobada',aprobadoPor:curUser.uid});
+    try{
+      await addDoc(collection(db,'notificaciones'),{
+        tienda,tipo:'registro-manual-aprobado',
+        mensaje:`✓ Registro manual aprobado para ${nombre} — ${r.fecha} ${r.hora}`,
+        fecha:new Date().toISOString(),leida:false,timestamp:serverTimestamp()
+      });
+    }catch(e){console.warn('No se pudo notificar al gerente',e);}
+    card.querySelector('.pill').className='pill p-ok';
+    card.querySelector('.pill').textContent='Aprobado';
+    botones.innerHTML='<span style="font-size:11px;color:var(--verde-t)">✓ Registro creado — gerente notificado</span>';
+  }catch(e){
+    console.error(e);
+    btn.disabled=false;btn.textContent=textoOriginal;
+    alert('No se pudo aprobar el registro: '+e.message);
+  }
 };
 
-window.rechazarRegistroManual=async(id,btn)=>{
+window.rechazarRegistroManual=async(btn)=>{
+  const id=btn.dataset.id,card=btn.closest('.appr-card'),botones=btn.closest('.appr-btns');
   const motivo=prompt('Motivo del rechazo:');if(!motivo)return;
-  const snap=await getDoc(doc(db,'registros-manuales',id));
-  const r=snap.data();
-  await updateDoc(doc(db,'registros-manuales',id),{estado:'rechazada',motivoRechazo:motivo});
-  await addDoc(collection(db,'notificaciones'),{
-    tienda:r.tienda,tipo:'registro-manual-rechazado',
-    mensaje:`✗ Registro manual rechazado. Motivo: ${motivo}`,
-    fecha:new Date().toISOString(),leida:false,timestamp:serverTimestamp()
-  });
-  btn.closest('.appr-card').querySelector('.pill').className='pill p-rej';
-  btn.closest('.appr-card').querySelector('.pill').textContent='Rechazado';
-  btn.closest('.appr-btns').innerHTML=`<span style="font-size:11px;color:var(--rojo)">✗ Rechazado</span>`;
+  try{
+    const snap=await getDoc(doc(db,'registros-manuales',id));
+    if(!snap.exists())throw new Error('la solicitud ya no existe');
+    const r=snap.data();
+    await updateDoc(doc(db,'registros-manuales',id),{estado:'rechazada',motivoRechazo:motivo});
+    try{
+      await addDoc(collection(db,'notificaciones'),{
+        tienda:r.tienda||'',tipo:'registro-manual-rechazado',
+        mensaje:`✗ Registro manual rechazado. Motivo: ${motivo}`,
+        fecha:new Date().toISOString(),leida:false,timestamp:serverTimestamp()
+      });
+    }catch(e){console.warn('No se pudo notificar al gerente',e);}
+    card.querySelector('.pill').className='pill p-rej';
+    card.querySelector('.pill').textContent='Rechazado';
+    botones.innerHTML='<span style="font-size:11px;color:var(--rojo)">✗ Rechazado</span>';
+  }catch(e){console.error(e);alert('No se pudo rechazar el registro: '+e.message);}
 };
 
 // ── MALLAS GUARDADAS ──
@@ -3470,7 +3507,7 @@ async function cargarPersonasBloqueadas(){
             ${fecha?`<br><span style="font-size:10px;color:var(--gris-m)">Bloqueado el ${fecha}</span>`:''}
           </div>
         </div>
-        <button class="btn-sm-ok" onclick="desbloquearPersonaDirecta('${d.id}','${p.nombre.replace(/'/g,"\\'")}',this)">🔓 Desbloquear</button>
+        <button class="btn-sm-ok" onclick="desbloquearPersonaDirecta('${d.id}',${jsArg(p.nombre)},this)">🔓 Desbloquear</button>
       </div>`;
     div.appendChild(card);
   });
@@ -3479,23 +3516,23 @@ async function cargarPersonasBloqueadas(){
 window.desbloquearPersonaDirecta=async(cedula,nombre,btn)=>{
   if(!confirm(`¿Desbloquear a ${nombre}?\n\nPodrá volver a registrarse en el kiosk.`))return;
   try{
-    await updateDoc(doc(db,'personal',cedula),{
-      bloqueado:false,
-      motivoBloqueo:null,
-      fechaDesbloqueo:new Date().toISOString()
-    });
-    // Limpiar contador de intentos — se hace en localStorage del kiosk pero también dejamos registro
-    btn.closest('.appr-card').style.opacity='0.5';
-    btn.textContent='✓ Desbloqueado';
-    btn.disabled=true;
-    btn.closest('.appr-card').querySelector('.appr-name').textContent='✓ '+nombre+' — Desbloqueado';
-    // Notificación al gerente de la tienda
-    const tienda=btn.closest('.appr-card').querySelector('.appr-detail').textContent.split('·')[0].trim();
-    await addDoc(collection(db,'notificaciones'),{
-      tienda,tipo:'desbloqueo',
-      mensaje:`🔓 ${nombre} ha sido desbloqueado. Ya puede registrarse en el kiosk.`,
-      fecha:new Date().toISOString(),leida:false,timestamp:serverTimestamp()
-    });
+    const snap=await getDoc(doc(db,'personal',cedula));
+    const tienda=snap.exists()?(snap.data().tienda||''):'';
+    await updateDoc(doc(db,'personal',cedula),{bloqueado:false,motivoBloqueo:null,fechaDesbloqueo:new Date().toISOString()});
+    const card=btn.closest('.appr-card')||btn.closest('.alerta-row');
+    if(card){
+      card.style.opacity='0.5';
+      const nm=card.querySelector('.appr-name')||card.querySelector('.alerta-title');
+      if(nm)nm.textContent='✓ '+nombre+' — Desbloqueado';
+    }
+    btn.textContent='✓ Desbloqueado';btn.disabled=true;
+    try{
+      await addDoc(collection(db,'notificaciones'),{
+        tienda,tipo:'desbloqueo',
+        mensaje:`🔓 ${nombre} ha sido desbloqueado. Ya puede registrarse en el kiosk.`,
+        fecha:new Date().toISOString(),leida:false,timestamp:serverTimestamp()
+      });
+    }catch(e){console.warn('No se pudo notificar el desbloqueo',e);}
   }catch(e){
     alert('Error al desbloquear: '+e.message);
   }
@@ -3525,7 +3562,7 @@ async function cargarAlertas(){
       </div>
       <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0">
         <span style="font-size:10px;color:var(--gris-m)">${p.fechaBloqueo?new Date(p.fechaBloqueo).toLocaleDateString('es-CO'):''}</span>
-        <button class="btn-sm-ok" style="font-size:10px" onclick="desbloquearPersonaDirecto('${d.id}','${p.nombre.replace(/'/g,"\\'")}',this)">🔓 Desbloquear</button>
+        <button class="btn-sm-ok" style="font-size:10px" onclick="desbloquearPersonaDirecta('${d.id}',${jsArg(p.nombre)},this)">🔓 Desbloquear</button>
       </div>`;
     alertasDiv.appendChild(div);
   });
