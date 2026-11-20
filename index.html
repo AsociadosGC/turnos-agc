@@ -765,7 +765,7 @@ body{font-family:var(--font);background:var(--bg);min-height:100vh;color:#1a1a2e
     <!-- VISTA MENSUAL -->
     <div class="view" id="view-mes">
       <div class="card">
-        <div class="card-title">Vista mensual — horas trabajadas según el kiosk</div>
+        <div class="card-title">Vista mensual</div>
         <div style="display:flex;gap:8px;margin-bottom:1rem;flex-wrap:wrap;align-items:flex-end">
           <div class="fg" style="margin-bottom:0;min-width:150px"><label>Mes</label><input type="month" id="mes-sel" onchange="cargarVistaMes()"></div>
           <div class="fg" id="mes-tienda-wrap" style="margin-bottom:0;flex:1;min-width:150px"><label>Tienda</label><select id="mes-tienda" onchange="cargarVistaMes()"><option value="all">Todas las tiendas</option></select></div>
@@ -773,20 +773,15 @@ body{font-family:var(--font);background:var(--bg);min-height:100vh;color:#1a1a2e
             <select id="mes-cargo" onchange="cargarVistaMes()">
               <option value="all">Todos los cargos</option><option value="GERENTE">Solo Gerentes</option><option value="SUBGERENTE">Solo Subgerentes</option><option value="ASESOR">Solo Asesores</option>
             </select></div>
+          <div class="fg" style="margin-bottom:0;flex:1;min-width:190px"><label>Qué mostrar</label>
+            <select id="mes-modo" onchange="cargarVistaMes()">
+              <option value="programado">Turnos programados (malla)</option><option value="trabajado">Horas trabajadas (kiosk)</option>
+            </select></div>
           <button class="btn-p" style="width:auto;margin-top:0;padding:8px 14px" onclick="cargarVistaMes()">Ver</button>
           <button class="btn-s" id="mes-export" style="padding:8px 14px" onclick="exportarVistaMes()">📥 Exportar</button>
         </div>
         <div id="mes-aviso" style="margin-bottom:8px"></div>
-        <div style="font-size:10px;color:var(--gris-m);margin-bottom:8px;line-height:1.6">
-          <span style="background:#f0fff8;color:var(--verde-t);padding:1px 6px;border-radius:4px">8.5 = horas trabajadas (entrada a salida, menos almuerzo de la malla)</span>
-          <span style="background:var(--rojo-c);color:var(--rojo);padding:1px 6px;border-radius:4px">F turno sin registro · ? revisar</span>
-          <span style="background:var(--am-c);color:var(--am-t);padding:1px 6px;border-radius:4px">E entrada sin salida · amarillo = difiere 30 min o más del turno</span>
-          <span style="background:var(--am-c);color:var(--am-t);padding:1px 6px;border-radius:4px">D descanso</span>
-          <span style="background:#efe9ff;color:#4c3a9e;padding:1px 6px;border-radius:4px">C compensatorio</span>
-          <span style="background:var(--az-c);color:var(--az-t);padding:1px 6px;border-radius:4px">INC / VAC / PER</span>
-          <span style="background:#fff0f0;color:#8b0000;padding:1px 6px;border-radius:4px">trabaja su día de descanso (dominical)</span>
-          · Pasa el mouse por una celda para ver entrada, salida y turno programado · Borde punteado = malla aún no aprobada · Encabezado dorado = lunes festivo
-        </div>
+        <div id="mes-leyenda" style="font-size:10px;color:var(--gris-m);margin-bottom:8px;line-height:1.6"></div>
         <div style="overflow-x:auto;max-height:70vh" id="mes-wrap"><div style="font-size:12px;color:var(--gris-m)">Selecciona el mes.</div></div>
       </div>
     </div>
@@ -2369,6 +2364,15 @@ window.initVistaMes=()=>{
   if(ex)ex.style.display=curRole==='consulta'?'none':'inline-block';
 };
 
+const leyendaMes=modo=>{
+  const chip=(bg,col,t,x='')=>`<span style="background:${bg};color:${col};padding:1px 6px;border-radius:4px;${x}">${t}</span>`;
+  const comunes=[chip('var(--am-c)','var(--am-t)','D descanso'),chip('#efe9ff','#4c3a9e','C compensatorio'),chip('var(--az-c)','var(--az-t)','INC / VAC / PER'),chip('#fff0f0','#8b0000','trabaja su día de descanso (dominical)')].join(' ');
+  const cola=' · Pasa el mouse por una celda para ver el detalle · Borde punteado dorado = malla aún no aprobada · Encabezado dorado = lunes festivo';
+  if(modo==='programado')return chip('#eef2ff','var(--azul)','8 = horas del turno programado en la malla (sin almuerzo)')+' '+comunes+cola;
+  return [chip('#f0fff8','var(--verde-t)','8.5 = horas trabajadas (entrada a salida, menos almuerzo)'),chip('var(--rojo-c)','var(--rojo)','F turno sin registro · ? revisar'),
+    chip('var(--am-c)','var(--am-t)','E entrada sin salida · amarillo = difiere 30 min o más del turno'),chip('#fff','var(--gris-m)','8 gris cursiva = turno programado, aún por trabajar','border:1px dashed #c9c9d6;font-style:italic')].join(' ')+' '+comunes+cola;
+};
+
 window.cargarVistaMes=async()=>{
   const wrap=document.getElementById('mes-wrap');
   const avisoEl=document.getElementById('mes-aviso');
@@ -2378,6 +2382,8 @@ window.cargarVistaMes=async()=>{
   avisoEl.innerHTML='';
   const tienda=curRole==='gerente'?curTienda:document.getElementById('mes-tienda').value;
   const cargoF=document.getElementById('mes-cargo').value;
+  const modo=document.getElementById('mes-modo').value;   // 'programado' (malla) o 'trabajado' (kiosk)
+  document.getElementById('mes-leyenda').innerHTML=leyendaMes(modo);
   const [anio,mes]=mesSel.split('-').map(Number);
   const diasMes=new Date(anio,mes,0).getDate();
   const primero=new Date(anio,mes-1,1,12);
@@ -2388,10 +2394,10 @@ window.cargarVistaMes=async()=>{
     const qP=tienda==='all'?collection(db,'personal'):query(collection(db,'personal'),where('tienda','==',tienda));
     // Los registros hechos después de las 7pm quedan guardados con la fecha del día siguiente (UTC): se trae 1 día de margen y se reubica por la hora real
     const qR=query(collection(db,'registros'),where('fecha','>=',isoDate(sumaDias(primero,-1))),where('fecha','<=',isoDate(sumaDias(ultimo,1))));
-    const [snapM,snapP,snapT,snapR]=await Promise.all([getDocs(qM),getDocs(qP),getDocs(collection(db,'turnos-maestros')),getDocs(qR)]);
+    const [snapM,snapP,snapT,snapR]=await Promise.all([getDocs(qM),getDocs(qP),getDocs(collection(db,'turnos-maestros')),modo==='trabajado'?getDocs(qR):Promise.resolve(null)]);
     const turnos={};snapT.forEach(d=>turnos[d.id]=d.data());
     const regsDia={};let totalRegs=0;
-    snapR.forEach(d=>{
+    if(snapR)snapR.forEach(d=>{
       const r=d.data();
       if(tienda!=='all'&&r.tienda!==tienda)return;
       if(r.verificado===false)return;
@@ -2455,7 +2461,7 @@ window.cargarVistaMes=async()=>{
       if(estados.length)avisoEl.innerHTML=`<div class="alert-warn">⚠ Semanas sin malla aprobada: ${estados.join(' · ')}</div>`;
     }
 
-    if(!totalRegs)avisoEl.innerHTML+='<div class="alert-warn">Sin registros del kiosk en este mes: los días con turno ya pasados aparecen como F.</div>';
+    if(modo==='trabajado'&&!totalRegs)avisoEl.innerHTML+='<div class="alert-warn">Sin registros del kiosk en este mes: los días con turno ya pasados aparecen como F.</div>';
 
     // Encabezados
     let th1='<th style="position:sticky;left:0;z-index:3;background:var(--bg);min-width:150px;text-align:left;padding-left:8px">Persona</th>';
@@ -2467,14 +2473,14 @@ window.cargarVistaMes=async()=>{
       th1+=`<th style="min-width:46px;${bg}" ${fest?'title="Lunes festivo"':''}>${d}</th>`;
       th2+=`<th style="font-size:9px;${bg}">${LETRA_DIA[f.getDay()]}</th>`;
     }
-    th1+='<th style="min-width:50px">Total h</th><th style="min-width:44px">Faltas</th>';th2+='<th></th><th></th>';
+    th1+='<th style="min-width:50px">Total h</th>'+(modo==='trabajado'?'<th style="min-width:44px">Faltas</th>':'');th2+='<th></th>'+(modo==='trabajado'?'<th></th>':'');
 
     // Cuerpo
     let body='';let ultimaTienda=null;
-    const exp=[['Tienda','Cédula','Nombre','Cargo',...Array.from({length:diasMes},(_,i)=>String(i+1)),'Total h','Faltas']];
+    const exp=[['Tienda','Cédula','Nombre','Cargo',...Array.from({length:diasMes},(_,i)=>String(i+1)),'Total h',...(modo==='trabajado'?['Faltas']:[])]];
     filas.forEach(p=>{
       if(tienda==='all'&&p.tienda!==ultimaTienda){
-        body+=`<tr><td colspan="${diasMes+3}" style="background:var(--azul);color:#fff;font-size:11px;font-weight:700;padding:5px 8px;position:sticky;left:0">${p.tienda}</td></tr>`;
+        body+=`<tr><td colspan="${diasMes+(modo==='trabajado'?3:2)}" style="background:var(--azul);color:#fff;font-size:11px;font-weight:700;padding:5px 8px;position:sticky;left:0">${p.tienda}</td></tr>`;
         ultimaTienda=p.tienda;
       }
       const diaDesc=getDiaDescanso(p.tienda,p.cargo);
@@ -2488,8 +2494,25 @@ window.cargarVistaMes=async()=>{
         const res=regs.length?horasTrabajadasDia(regs,tM):null;
         const hm=m=>fmt12(pad2(Math.floor(m/60)%24)+':'+pad2(m%60));
         const progTxt=tM?`Programado: ${tM.nombre} ${fmt12(tM.entrada)}–${fmt12(tM.salida)} (${tM.horas}h)`:'';
-        let txt='',bg='#fff',col='var(--gris-m)',tip='';
-        if(res){
+        let txt='',bg='#fff',col='var(--gris-m)',tip='',extra='';
+        const esDom=diaDesc!==null&&f.getDay()===diaDesc;
+        const sinTurno=c&&NO_TRABAJO.includes(c.v);
+        const horasProg=tM?Math.round((tM.horas||0)*100)/100:0;
+        const marcarSinTurno=()=>{
+          const v=c.v;
+          if(v==='DESCANSO'){txt='D';bg='var(--am-c)';col='var(--am-t)';tip='Descanso';}
+          else if(v==='COMPENSATORIO'){txt='C';bg='#efe9ff';col='#4c3a9e';tip='Descanso compensatorio';}
+          else{txt=v.substring(0,3);bg='var(--az-c)';col='var(--az-t)';tip=v;}
+        };
+        if(modo==='programado'){
+          // Turnos de la malla (aprobada; si no hay, pendiente o borrador con borde punteado)
+          if(sinTurno)marcarSinTurno();
+          else if(tM){
+            txt=String(horasProg);total+=horasProg;
+            bg=esDom?'#fff0f0':'#eef2ff';col=esDom?'#8b0000':'var(--azul)';
+            tip=progTxt+(esDom?' · día de descanso asignado (dominical)':'');
+          }else if(c){txt='?';bg='var(--rojo-c)';col='var(--rojo)';tip='El turno de la malla ya no existe en Mis turnos';}
+        }else if(res){
           if(res.horas===null){
             txt='E';bg='var(--am-c)';col='var(--am-t)';
             tip=`Entrada ${hm(res.entrada)} sin registro de salida`;
@@ -2498,7 +2521,6 @@ window.cargarVistaMes=async()=>{
             tip=`Revisar registros: entrada ${hm(res.entrada)} · salida ${hm(res.salida)}`;
           }else{
             txt=String(res.horas);total+=res.horas;
-            const esDom=diaDesc!==null&&f.getDay()===diaDesc;
             const difiere=tM&&Math.abs(res.horas-(tM.horas||0))>=0.5;
             const alerta=difiere||!tM;
             bg=alerta?'var(--am-c)':esDom?'#fff0f0':'#f0fff8';
@@ -2509,27 +2531,23 @@ window.cargarVistaMes=async()=>{
             else tip+=' · sin turno en la malla';
             if(esDom)tip+=' · día de descanso asignado (dominical)';
           }
-        }else if(c){
-          const v=c.v;
-          if(v==='DESCANSO'){txt='D';bg='var(--am-c)';col='var(--am-t)';tip='Descanso';}
-          else if(v==='COMPENSATORIO'){txt='C';bg='#efe9ff';col='#4c3a9e';tip='Descanso compensatorio';}
-          else if(['INCAPACIDAD','VACACIONES','PERMISO'].includes(v)){txt=v.substring(0,3);bg='var(--az-c)';col='var(--az-t)';tip=v;}
-          else if(tM){
-            if(fechaISO<hoyISO){txt='F';bg='var(--rojo-c)';col='var(--rojo)';tip=`Sin registro en el kiosk · ${progTxt}`;faltas++;}
-            else tip=progTxt;
-          }else{txt='?';tip='Turno no encontrado';}
-        }
+        }else if(sinTurno){
+          marcarSinTurno();
+        }else if(tM){
+          if(fechaISO<hoyISO){txt='F';bg='var(--rojo-c)';col='var(--rojo)';tip=`Sin registro en el kiosk · ${progTxt}`;faltas++;}
+          else{txt=String(horasProg);extra='font-style:italic;border:1px dashed #c9c9d6;';tip='Programado, aún por trabajar · '+progTxt;}
+        }else if(c){txt='?';tip='Turno no encontrado';}
         if(c&&c.estado!=='aprobada')tip+=` · malla ${c.estado}`;
         const borde=c&&c.estado!=='aprobada'?'border:1px dashed #b9a24a;':'';
-        tds+=`<td title="${tip.replace(/"/g,'&quot;')}" style="text-align:center;font-size:9px;font-weight:500;padding:3px 1px;background:${bg};color:${col};${borde}white-space:nowrap">${txt}</td>`;
+        tds+=`<td title="${tip.replace(/"/g,'&quot;')}" style="text-align:center;font-size:9px;font-weight:500;padding:3px 1px;background:${bg};color:${col};${borde}white-space:nowrap;${extra}">${txt}</td>`;
         fila.push(txt);
       }
       total=Math.round(total*100)/100;
-      fila.push(total);fila.push(faltas);exp.push(fila);
-      body+=`<tr><td style="position:sticky;left:0;z-index:2;background:#fff;font-size:11px;font-weight:500;padding-left:8px;white-space:nowrap">${p.nombre.split(' ').slice(0,2).join(' ')}<br><span style="font-size:9px;color:var(--gris-m)">${p.cargo}·${p.tipo||''}</span></td>${tds}<td class="tc" style="font-weight:700;font-size:11px;color:var(--azul)">${total}</td><td class="tc" style="font-size:11px;font-weight:700;color:${faltas?'var(--rojo)':'var(--gris-m)'}">${faltas||'—'}</td></tr>`;
+      fila.push(total);if(modo==='trabajado')fila.push(faltas);exp.push(fila);
+      body+=`<tr><td style="position:sticky;left:0;z-index:2;background:#fff;font-size:11px;font-weight:500;padding-left:8px;white-space:nowrap">${p.nombre.split(' ').slice(0,2).join(' ')}<br><span style="font-size:9px;color:var(--gris-m)">${p.cargo}·${p.tipo||''}</span></td>${tds}<td class="tc" style="font-weight:700;font-size:11px;color:var(--azul)">${total}</td>${modo==='trabajado'?`<td class="tc" style="font-size:11px;font-weight:700;color:${faltas?'var(--rojo)':'var(--gris-m)'}">${faltas||'—'}</td>`:''}</tr>`;
     });
     wrap.innerHTML=`<table class="malla-table" style="table-layout:auto;min-width:${diasMes*46+200}px"><thead><tr>${th1}</tr><tr>${th2}</tr></thead><tbody>${body}</tbody></table>`;
-    window._mesExport={rows:exp,nombre:`mensual_${tienda==='all'?'todas':tienda.replace(/\s/g,'_')}_${mesSel}`};
+    window._mesExport={rows:exp,nombre:`mensual_${tienda==='all'?'todas':tienda.replace(/\s/g,'_')}_${mesSel}_${modo}`};
   }catch(e){
     console.error(e);
     wrap.innerHTML=`<div class="alert-err">Error cargando la vista mensual: ${e.message}</div>`;
