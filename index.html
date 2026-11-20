@@ -501,7 +501,8 @@ body{font-family:var(--font);background:var(--bg);min-height:100vh;color:#1a1a2e
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
               <div class="fg"><label>Sal. almuerzo</label><input type="time" id="t-sal-alm" value="12:00" oninput="calcHorasTurno()"></div>
               <div class="fg"><label>Duración</label>
-                <select id="t-dur-alm" onchange="calcHorasTurno()">
+                <select id="t-dur-alm" onchange="onDurAlmChange()">
+                  <option value="0">0 (sin almuerzo)</option>
                   <option value="0.5">30 minutos</option>
                   <option value="1" selected>1 hora</option>
                   <option value="1.5">1,5 horas</option>
@@ -1468,11 +1469,16 @@ function renderTurnos(){
   });
 }
 
+// Almuerzo del formulario: solo cuenta si dice "Sí" y la duración es mayor que 0
+const almuerzoForm=()=>{
+  const conAlm=document.getElementById('t-tiene-alm').value==='si'&&parseFloat(document.getElementById('t-dur-alm').value)>0;
+  return {conAlm,durAlm:conAlm?parseFloat(document.getElementById('t-dur-alm').value):0};
+};
+
 window.calcHorasTurno=()=>{
   const entrada=document.getElementById('t-entrada').value;
   const salida=document.getElementById('t-salida').value;
-  const tieneAlm=document.getElementById('t-tiene-alm').value;
-  const durAlm=tieneAlm==='si'?parseFloat(document.getElementById('t-dur-alm').value):0;
+  const {durAlm}=almuerzoForm();
   const el=document.getElementById('t-horas-calc');
   if(!entrada||!salida){el.textContent='—';return;}
   const mins=parseT(salida)-parseT(entrada);
@@ -1482,16 +1488,27 @@ window.calcHorasTurno=()=>{
 };
 
 window.toggleAlmuerzo=()=>{
-  document.getElementById('t-alm-fields').style.display=document.getElementById('t-tiene-alm').value==='si'?'block':'none';
+  const si=document.getElementById('t-tiene-alm').value==='si',dur=document.getElementById('t-dur-alm');
+  if(si&&parseFloat(dur.value)===0)dur.value='1';   // al volver a "Sí" no se queda en 0
+  document.getElementById('t-alm-fields').style.display=si?'block':'none';
+};
+
+// Elegir 0 en la duración equivale a "No tiene almuerzo"
+window.onDurAlmChange=()=>{
+  if(parseFloat(document.getElementById('t-dur-alm').value)===0){
+    document.getElementById('t-tiene-alm').value='no';
+    document.getElementById('t-alm-fields').style.display='none';
+  }
+  calcHorasTurno();
 };
 
 window.guardarTurno=async()=>{
   const nombre=document.getElementById('t-nombre').value.trim();
   const entrada=document.getElementById('t-entrada').value;
   const salida=document.getElementById('t-salida').value;
-  const tieneAlm=document.getElementById('t-tiene-alm').value;
-  const salAlm=tieneAlm==='si'?document.getElementById('t-sal-alm').value:'';
-  const durAlm=tieneAlm==='si'?parseFloat(document.getElementById('t-dur-alm').value):0;
+  const {conAlm,durAlm}=almuerzoForm();
+  const tieneAlm=conAlm?'si':'no';
+  const salAlm=conAlm?document.getElementById('t-sal-alm').value:'';
   const horasEl=document.getElementById('t-horas-calc').textContent;
   const horas=parseFloat(horasEl)||0;
   if(!nombre||!entrada||!salida||horas<=0){alert('Completa todos los campos correctamente');return;}
@@ -3199,16 +3216,22 @@ async function cargarListaRegistrosManuales(){
 }
 
 // En dashboard directora — registros manuales pendientes
+// Solicitudes pendientes cargadas en pantalla (los botones solo llevan el identificador, nunca el nombre)
+const SOL_MANUALES=new Map(),REG_MANUAL_CREADOS=new Set();
+const conTiempo=(fn,ms)=>Promise.race([fn(),new Promise((_,rej)=>setTimeout(()=>rej(new Error('Firebase no respondió en '+Math.round(ms/1000)+' segundos. Revisa la conexión e inténtalo de nuevo.')),ms))]);
+const detalleError=e=>(e&&e.code?e.code+' — ':'')+(e&&e.message?e.message:String(e));
+
 async function cargarRegistrosManualesDirectora(){
   const div=document.getElementById('dash-reg-manuales');if(!div)return;
   const snaps=await getDocs(query(collection(db,'registros-manuales'),where('estado','==','pendiente')));
-  div.innerHTML='';
+  div.innerHTML='';SOL_MANUALES.clear();
   if(snaps.empty){
     div.innerHTML='<div style="font-size:12px;color:var(--gris-m)">Sin solicitudes de registro manual.</div>';
     return;
   }
   snaps.forEach(d=>{
     const r=d.data();
+    SOL_MANUALES.set(d.id,r);
     const card=document.createElement('div');card.className='appr-card';
     card.style.borderLeft='3px solid var(--azul)';
     card.innerHTML=`
@@ -3230,26 +3253,26 @@ async function cargarRegistrosManualesDirectora(){
   });
 }
 
-// Los datos se leen de la solicitud guardada (no del botón), así ningún carácter raro en un nombre impide aprobar.
+// Mismas operaciones de siempre: crear el registro, marcar la solicitud y avisar al gerente.
 window.aprobarRegistroManual=async(btn)=>{
-  const id=btn.dataset.id,card=btn.closest('.appr-card'),botones=btn.closest('.appr-btns'),textoOriginal=btn.textContent;
+  const id=btn.dataset.id,r=SOL_MANUALES.get(id),card=btn.closest('.appr-card'),botones=btn.closest('.appr-btns'),textoOriginal=btn.textContent;
+  if(!r){alert('Esta solicitud no está cargada en pantalla. Actualiza la página e inténtalo de nuevo.');return;}
   btn.disabled=true;btn.textContent='Registrando...';
   try{
-    const snap=await getDoc(doc(db,'registros-manuales',id));
-    if(!snap.exists())throw new Error('la solicitud ya no existe');
-    const r=snap.data();
-    if(r.estado&&r.estado!=='pendiente')throw new Error('esta solicitud ya fue '+r.estado);
-    const nombre=r.nombre||'',tienda=r.tienda||'';
-    // Identificador fijo: si se vuelve a intentar, el registro no se duplica
-    await setDoc(doc(db,'registros','manual_'+id),{
-      cedula:r.cedula!=null?r.cedula:(r.empId||''),nombre,tienda,tipo:r.tipo||'',hora:r.hora||'',fecha:r.fecha||'',
-      verificado:true,manual:true,solicitudManual:id,timestamp:serverTimestamp()
-    });
-    await updateDoc(doc(db,'registros-manuales',id),{estado:'aprobada',aprobadoPor:curUser.uid});
+    await conTiempo(async()=>{
+      if(!REG_MANUAL_CREADOS.has(id)){   // si un intento anterior se quedó a medias, no se vuelve a crear el registro
+        await addDoc(collection(db,'registros'),{
+          cedula:r.cedula!=null?r.cedula:(r.empId||''),nombre:r.nombre||'',tienda:r.tienda||'',tipo:r.tipo||'',hora:r.hora||'',fecha:r.fecha||'',
+          verificado:true,manual:true,timestamp:serverTimestamp()
+        });
+        REG_MANUAL_CREADOS.add(id);
+      }
+      await updateDoc(doc(db,'registros-manuales',id),{estado:'aprobada',aprobadoPor:curUser.uid});
+    },30000);
     try{
       await addDoc(collection(db,'notificaciones'),{
-        tienda,tipo:'registro-manual-aprobado',
-        mensaje:`✓ Registro manual aprobado para ${nombre} — ${r.fecha} ${r.hora}`,
+        tienda:r.tienda||'',tipo:'registro-manual-aprobado',
+        mensaje:`✓ Registro manual aprobado para ${r.nombre||''} — ${r.fecha} ${r.hora}`,
         fecha:new Date().toISOString(),leida:false,timestamp:serverTimestamp()
       });
     }catch(e){console.warn('No se pudo notificar al gerente',e);}
@@ -3257,20 +3280,18 @@ window.aprobarRegistroManual=async(btn)=>{
     card.querySelector('.pill').textContent='Aprobado';
     botones.innerHTML='<span style="font-size:11px;color:var(--verde-t)">✓ Registro creado — gerente notificado</span>';
   }catch(e){
-    console.error(e);
+    console.error('[aprobar registro manual]',e);
     btn.disabled=false;btn.textContent=textoOriginal;
-    alert('No se pudo aprobar el registro: '+e.message);
+    alert('No se pudo aprobar el registro.\n\nMotivo: '+detalleError(e)+(REG_MANUAL_CREADOS.has(id)?'\n\nEl registro ya se creó; al reintentar solo se marcará la solicitud como aprobada.':''));
   }
 };
 
 window.rechazarRegistroManual=async(btn)=>{
-  const id=btn.dataset.id,card=btn.closest('.appr-card'),botones=btn.closest('.appr-btns');
+  const id=btn.dataset.id,r=SOL_MANUALES.get(id),card=btn.closest('.appr-card'),botones=btn.closest('.appr-btns');
+  if(!r){alert('Esta solicitud no está cargada en pantalla. Actualiza la página e inténtalo de nuevo.');return;}
   const motivo=prompt('Motivo del rechazo:');if(!motivo)return;
   try{
-    const snap=await getDoc(doc(db,'registros-manuales',id));
-    if(!snap.exists())throw new Error('la solicitud ya no existe');
-    const r=snap.data();
-    await updateDoc(doc(db,'registros-manuales',id),{estado:'rechazada',motivoRechazo:motivo});
+    await conTiempo(()=>updateDoc(doc(db,'registros-manuales',id),{estado:'rechazada',motivoRechazo:motivo}),30000);
     try{
       await addDoc(collection(db,'notificaciones'),{
         tienda:r.tienda||'',tipo:'registro-manual-rechazado',
@@ -3281,10 +3302,11 @@ window.rechazarRegistroManual=async(btn)=>{
     card.querySelector('.pill').className='pill p-rej';
     card.querySelector('.pill').textContent='Rechazado';
     botones.innerHTML='<span style="font-size:11px;color:var(--rojo)">✗ Rechazado</span>';
-  }catch(e){console.error(e);alert('No se pudo rechazar el registro: '+e.message);}
+  }catch(e){console.error('[rechazar registro manual]',e);alert('No se pudo rechazar el registro.\n\nMotivo: '+detalleError(e));}
 };
 
 // ── MALLAS GUARDADAS ──
+const MALLAS_GUARDADAS=new Map();   // id → {estado, semana} de lo que se ve en la lista
 async function cargarMallasGuardadas(){
   const list=document.getElementById('mallas-guardadas-list');
   if(!list)return;
@@ -3294,11 +3316,11 @@ async function cargarMallasGuardadas(){
   snaps.forEach(d=>mallas.push({id:d.id,...d.data()}));
   mallas.sort((a,b)=>b.semana?.localeCompare(a.semana||'')||0);
   if(mallas.length===0){list.innerHTML='<div style="font-size:12px;color:var(--gris-m)">Sin mallas guardadas.</div>';return;}
-  list.innerHTML='';
+  list.innerHTML='';MALLAS_GUARDADAS.clear();
   mallas.forEach(m=>{
     const estadoPill=m.estado==='aprobada'?'p-ok':m.estado==='rechazada'?'p-rej':m.estado==='borrador'?'p-auto':'p-pend';
     const estadoLabel=m.estado==='aprobada'?'Aprobada':m.estado==='rechazada'?'Rechazada':m.estado==='borrador'?'Borrador':'Pendiente';
-    const puedeEliminar=m.estado==='borrador'||m.estado==='rechazada';
+    MALLAS_GUARDADAS.set(m.id,{estado:m.estado,semana:m.semana});
     const row=document.createElement('div');row.className='appr-card';
     row.id=`malla-saved-${m.id}`;
     row.innerHTML=`
@@ -3309,7 +3331,7 @@ async function cargarMallasGuardadas(){
         </div>
         <div style="display:flex;gap:4px;flex-shrink:0">
           <button class="btn-s" style="padding:4px 10px;font-size:11px" onclick="editarMalla('${m.id}','${m.semana}')">✏ Editar</button>
-          ${puedeEliminar?`<button class="btn-deact" style="color:var(--rojo);border-color:var(--rojo);padding:4px 10px;font-size:11px" onclick="eliminarMallaGuardada('${m.id}')">🗑 Eliminar</button>`:''}
+          <button class="btn-deact" style="color:var(--rojo);border-color:var(--rojo);padding:4px 10px;font-size:11px" onclick="eliminarMallaGuardada('${m.id}')">🗑 Eliminar</button>
         </div>
       </div>`;
     list.appendChild(row);
@@ -3317,15 +3339,29 @@ async function cargarMallasGuardadas(){
 }
 
 window.eliminarMallaGuardada=async(mallaId)=>{
-  if(!confirm('¿Eliminar esta malla?\n\nSolo se pueden eliminar borradores y mallas rechazadas.'))return;
+  const m=MALLAS_GUARDADAS.get(mallaId)||{},semana=m.semana||'';
+  const terminada=semana&&isoDate(sumaDias(lunesDe(semana),6))<isoDate(new Date());
+  let seguir;
+  if(m.estado==='aprobada'){
+    seguir=confirm(`⚠ La malla de la semana del ${semana} está APROBADA.\n\nSi la eliminas:\n• el kiosk no dejará registrar a nadie esa semana (no habrá turnos)\n• se pierde la programación que se usa para la nómina${terminada?'\n• esa semana ya terminó':''}\n• la Directora dejará de verla en su historial\n\n¿Seguro que quieres eliminarla?`)
+      &&confirm('Confirma de nuevo: eliminar una malla aprobada no se puede deshacer.');
+  }else if(m.estado==='pendiente'){
+    seguir=confirm(`La malla de la semana del ${semana} está pendiente de aprobación.\n\nSi la eliminas, saldrá de la lista de la Directora y tendrás que cargarla de nuevo.\n\n¿Eliminarla?`);
+  }else{
+    seguir=confirm(`¿Eliminar la malla de la semana del ${semana}?`);
+  }
+  if(!seguir)return;
   try{
     const {deleteDoc:delDoc}=await import("https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js");
     await delDoc(doc(db,'mallas',mallaId));
-    const el=document.getElementById(`malla-saved-${mallaId}`);
-    if(el)el.remove();
-    // Si no quedan items recargar
+    if(mallaEditandoId===mallaId){   // estaba abierta en el editor: se limpia para no guardar sobre una malla que ya no existe
+      mallaEditandoId=null;
+      document.getElementById('malla-body').innerHTML=`<tr><td colspan="10" style="text-align:center;padding:1.5rem;color:var(--gris-m);font-size:12px">Selecciona un jueves y carga el equipo.</td></tr>`;
+      ['malla-aviso','m-warn','dotacion-card'].forEach(id=>{const e=document.getElementById(id);if(e)e.style.display='none';});
+    }
     await cargarMallasGuardadas();
-  }catch(e){alert('Error al eliminar: '+e.message);}
+    if(typeof verificarMallaExistente==='function')verificarMallaExistente();
+  }catch(e){console.error('[eliminar malla]',e);alert('No se pudo eliminar la malla.\n\nMotivo: '+detalleError(e));}
 };
 
 window.editarMalla=async(mallaId,semana)=>{
