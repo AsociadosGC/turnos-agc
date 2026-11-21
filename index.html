@@ -1852,7 +1852,7 @@ const GPS_TIENDAS={
   'B71 Centro Suba':        {lat:4.7374848,  lng:-74.0857296, dir:'C.C. Centro Suba Local 9-004, Cl 140 #91-19, Bogotá'},
   'B88 Magangue':           {lat:9.2304676,  lng:-74.7439659, dir:'Cra 3 #11-37, Magangué (Bolívar)'},
   'B99 Corozal':            {lat:9.3145592,  lng:-75.2932119, dir:'Cl 29 #24-60, Corozal (Sucre)'},
-  'V01 Plato':              {lat:9.7902625,  lng:-74.7845657, dir:'Cra 15 #8-50, Plato (Magdalena)'},
+  'V01 Plato':              {lat:9.790379,   lng:-74.784569,  dir:'Cra 15 #8-53, Plato (Magdalena)'},
   'V89 San Marcos':         {lat:8.6566692,  lng:-75.1306517, dir:'Cl 15 #24-37, San Marcos (Sucre)'},
   'V90 Simijaca':           {lat:5.5036193,  lng:-73.8521391, dir:'Cra 7 #8-51, Simijaca (Cundinamarca)'},
   'V95 Chiquinquira':       {lat:5.6171969,  lng:-73.8159279, dir:'Cra 10 #17-34, Chiquinquirá (Boyacá)'},
@@ -1861,6 +1861,16 @@ const GPS_TIENDAS={
   '5188 Velez Granada':     {lat:3.5427079,  lng:-73.7081,    dir:'Cl 17 #13-71, Granada (Meta)'}
 };
 const GPS_RADIO_METROS=200;
+// Un portátil calcula su ubicación por Wi-Fi o internet y puede equivocarse cientos de metros. El navegador informa esa
+// imprecisión: si la persona PODRÍA estar dentro del radio considerando ese margen, se acepta (hasta un margen máximo).
+const GPS_PRECISION_MAX=1000;
+function evaluarUbicacion(dist,precision,radio){
+  const prec=Math.max(0,Math.round(precision||0));
+  const minima=Math.max(0,dist-Math.min(prec,GPS_PRECISION_MAX));   // distancia mínima posible según la precisión
+  const txtPrec=prec?` (precisión ±${prec}m)`:'';
+  if(minima<=radio)return {ok:true,mensaje:`GPS confirmado · ${dist}m de la tienda${txtPrec}`,distancia:dist};
+  return {ok:false,mensaje:`Ubicación fuera de rango · ${dist}m de la tienda${txtPrec} (máx ${radio}m)`,distancia:dist};
+}
 
 function calcDistanciaMetros(lat1,lng1,lat2,lng2){
   const R=6371000;
@@ -1888,11 +1898,7 @@ async function validarGPS(){
           pos.coords.latitude,pos.coords.longitude,
           tiendaGPS.lat,tiendaGPS.lng
         ));
-        if(dist<=GPS_RADIO_METROS){
-          resolve({ok:true,mensaje:`GPS confirmado · ${dist}m de la tienda`,distancia:dist});
-        }else{
-          resolve({ok:false,mensaje:`Ubicación fuera de rango · ${dist}m de la tienda (máx ${GPS_RADIO_METROS}m)`,distancia:dist});
-        }
+        resolve(evaluarUbicacion(dist,pos.coords.accuracy,tiendaGPS.radio||GPS_RADIO_METROS));
       },
       err=>{
         // Si el usuario niega el permiso o hay error, permitir con advertencia
