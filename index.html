@@ -266,11 +266,7 @@ body{font-family:var(--font);background:var(--bg);min-height:100vh;color:#1a1a2e
       <input type="hidden" id="editar-id">
       <div class="fg"><label>Nombre completo</label><input type="text" id="editar-nombre"></div>
       <div class="fg"><label>Cargo</label>
-        <select id="editar-cargo">
-          <option value="ASESOR">Asesor</option>
-          <option value="SUBGERENTE">Subgerente</option>
-          <option value="GERENTE">Gerente</option>
-        </select>
+        <select id="editar-cargo"></select>
       </div>
       <div class="fg"><label>Tipo de contrato</label>
         <select id="editar-tipo">
@@ -447,10 +443,7 @@ body{font-family:var(--font);background:var(--bg);min-height:100vh;color:#1a1a2e
           <div class="fg"><label>Cédula</label><input type="number" id="eq-ced" placeholder="Número de cédula"></div>
           <div class="fg"><label>Nombre completo</label><input type="text" id="eq-nom" placeholder="Apellidos y nombres"></div>
           <div class="fg"><label>Cargo</label>
-            <select id="eq-cargo">
-              <option value="ASESOR">Asesor</option>
-              <option value="SUBGERENTE">Subgerente</option>
-            </select></div>
+            <select id="eq-cargo"></select></div>
           <div class="fg"><label>Tipo de contrato</label>
             <select id="eq-tipo">
               <option value="TC">Tiempo completo (TC)</option>
@@ -770,9 +763,7 @@ body{font-family:var(--font);background:var(--bg);min-height:100vh;color:#1a1a2e
           <div class="fg" style="margin-bottom:0;min-width:150px"><label>Mes</label><input type="month" id="mes-sel" onchange="cargarVistaMes()"></div>
           <div class="fg" id="mes-tienda-wrap" style="margin-bottom:0;flex:1;min-width:150px"><label>Tienda</label><select id="mes-tienda" onchange="cargarVistaMes()"><option value="all">Todas las tiendas</option></select></div>
           <div class="fg" style="margin-bottom:0;flex:1;min-width:130px"><label>Cargo</label>
-            <select id="mes-cargo" onchange="cargarVistaMes()">
-              <option value="all">Todos los cargos</option><option value="GERENTE">Solo Gerentes</option><option value="SUBGERENTE">Solo Subgerentes</option><option value="ASESOR">Solo Asesores</option>
-            </select></div>
+            <select id="mes-cargo" onchange="cargarVistaMes()"></select></div>
           <div class="fg" style="margin-bottom:0;flex:1;min-width:190px"><label>Qué mostrar</label>
             <select id="mes-modo" onchange="cargarVistaMes()">
               <option value="programado">Turnos programados (malla)</option><option value="trabajado">Horas trabajadas (kiosk)</option>
@@ -809,12 +800,7 @@ body{font-family:var(--font);background:var(--bg);min-height:100vh;color:#1a1a2e
           </div>
           <div class="fg" style="margin-bottom:0;flex:1;min-width:120px">
             <label>Filtrar por cargo</label>
-            <select id="hist-cargo-sel" onchange="cargarHistorialMallas()">
-              <option value="all">Todos los cargos</option>
-              <option value="GERENTE">Solo Gerentes</option>
-              <option value="SUBGERENTE">Solo Subgerentes</option>
-              <option value="ASESOR">Solo Asesores</option>
-            </select>
+            <select id="hist-cargo-sel" onchange="cargarHistorialMallas()"></select>
           </div>
           <button class="btn-p" style="width:auto;margin-top:0;padding:8px 14px" onclick="cargarHistorialMallas()">Buscar</button>
         </div>
@@ -823,6 +809,33 @@ body{font-family:var(--font);background:var(--bg);min-height:100vh;color:#1a1a2e
     </div>
 
     <!-- REPORTE NÓMINA -->
+    <!-- PERSONAL (solo directora) -->
+    <div class="view" id="view-personal">
+      <div class="two-col">
+        <div class="card">
+          <div class="card-title">Crear persona</div>
+          <div style="font-size:11px;color:var(--gris-m);margin-bottom:12px;line-height:1.5">Desde aquí puedes crear personal con cualquier cargo en cualquier tienda. Solo la Directora puede crear gerentes. Después, la foto de referencia se toma desde el usuario de esa tienda (Mi equipo → Registrar foto).</div>
+          <div class="fg"><label>Tienda</label><select id="gp-tienda"></select></div>
+          <div class="fg"><label>Cédula</label><input type="number" id="gp-ced" placeholder="Número de cédula"></div>
+          <div class="fg"><label>Nombre completo</label><input type="text" id="gp-nom" placeholder="Apellidos y nombres"></div>
+          <div class="fg"><label>Cargo</label><select id="gp-cargo"></select></div>
+          <div class="fg"><label>Tipo de contrato</label>
+            <select id="gp-tipo"><option value="TC">Tiempo completo (TC)</option><option value="MT">Medio tiempo (MT)</option></select></div>
+          <button class="btn-p" onclick="crearPersonaDir()">Crear persona</button>
+          <div class="alert-ok" id="gp-ok"></div>
+        </div>
+        <div class="card">
+          <div class="card-title">Personal registrado</div>
+          <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+            <div class="fg" style="margin-bottom:0;flex:1;min-width:140px"><label>Tienda</label><select id="gp-f-tienda" onchange="cargarPersonalDir()"></select></div>
+            <div class="fg" style="margin-bottom:0;flex:1;min-width:140px"><label>Cargo</label><select id="gp-f-cargo" onchange="cargarPersonalDir()"></select></div>
+          </div>
+          <div id="gp-resumen" style="font-size:11px;color:var(--gris-m);margin-bottom:8px"></div>
+          <div id="gp-list" style="max-height:60vh;overflow:auto"><div style="font-size:12px;color:var(--gris-m)">Cargando...</div></div>
+        </div>
+      </div>
+    </div>
+
     <div class="view" id="view-reporte">
       <div class="card">
         <div class="card-title">Reporte de nómina</div>
@@ -1033,6 +1046,30 @@ const db=getFirestore(fbApp);
 // ── REGLAS DE NEGOCIO ──
 const JORNADA_MAX={TC:42,MT:21,GERENTE:999,SUBGERENTE:999};
 
+// ── CARGOS ──
+// GERENTE y SUBGERENTE son de dirección y confianza (sin horas extra). Los demás cargos siguen la regla de TC/MT
+// y tienen el mismo día de descanso asignado que el ASESOR de su tienda.
+const CARGOS=[
+  {id:'GERENTE',label:'Gerente',plural:'Gerentes'},
+  {id:'SUBGERENTE',label:'Subgerente',plural:'Subgerentes'},
+  {id:'ASESOR',label:'Asesor',plural:'Asesores'},
+  {id:'CAJERO',label:'Cajero',plural:'Cajeros'},
+  {id:'AUXILIAR DE BODEGA',label:'Auxiliar de bodega',plural:'Auxiliares de bodega'},
+  {id:'ASESOR ADMINISTRATIVO',label:'Asesor administrativo',plural:'Asesores administrativos'},
+  {id:'ASESOR VESTIER',label:'Asesor vestier',plural:'Asesores vestier'}
+];
+const ORDEN_CARGO=Object.fromEntries(CARGOS.map((c,i)=>[c.id,i]));
+const ORDEN_FORM=['ASESOR','CAJERO','AUXILIAR DE BODEGA','ASESOR ADMINISTRATIVO','ASESOR VESTIER','SUBGERENTE','GERENTE'];
+const esCargoDirectivo=c=>c==='GERENTE'||c==='SUBGERENTE';
+function llenarSelectsCargo(){
+  // Solo la Directora puede crear o asignar el cargo de Gerente
+  const form=ORDEN_FORM.filter(id=>curRole==='directora'||id!=='GERENTE').map(id=>CARGOS.find(c=>c.id===id)).map(c=>`<option value="${c.id}">${c.label}</option>`).join('');
+  ['eq-cargo','editar-cargo','gp-cargo'].forEach(id=>{const e=document.getElementById(id);if(e)e.innerHTML=form;});
+  const filtro='<option value="all">Todos los cargos</option>'+CARGOS.map(c=>`<option value="${c.id}">Solo ${c.plural}</option>`).join('');
+  ['mes-cargo','hist-cargo-sel','gp-f-cargo'].forEach(id=>{const e=document.getElementById(id);if(e)e.innerHTML=filtro;});
+}
+// Los selectores se llenan al iniciar sesión (cuando ya se conoce el rol), ver más abajo.
+
 // Día de descanso asignado por tienda y cargo (0=Dom,1=Lun,2=Mar,3=Mié,4=Jue,5=Vie,6=Sáb)
 const DESCANSOS={
   '952 Granada':    {GERENTE:1,SUBGERENTE:0,ASESOR:2},
@@ -1067,7 +1104,7 @@ const AUS_TIPOS={
   lut:{label:'Luto',auto:true,info:'Se activa de inmediato. 5 días primer grado, 3 días segundo grado.'}
 };
 const ROLES={
-  directora:{tabs:['dashboard','historial-mallas','mes','reporte'],labels:['📊 Dashboard','📅 Historial mallas','📆 Vista mensual','📄 Reporte nómina']},
+  directora:{tabs:['dashboard','historial-mallas','mes','personal','reporte'],labels:['📊 Dashboard','📅 Historial mallas','📆 Vista mensual','👥 Personal','📄 Reporte nómina']},
   gerente:{tabs:['kiosk','equipo','turnos','malla','mes','ausencias','registros','extras','notificaciones'],labels:['🖥 Kiosk','👥 Mi equipo','⏰ Mis turnos','📅 Malla semanal','📆 Vista mensual','📋 Ausencias','📋 Registros','⚡ Horas extra','🔔 Notificaciones']},
   consulta:{tabs:['historial-mallas','mes'],labels:['📅 Historial mallas','📆 Vista mensual']}
 };
@@ -1123,6 +1160,7 @@ onAuthStateChanged(auth,async user=>{
   const snap=await getDoc(doc(db,'usuarios',user.uid));
   const data=snap.exists()?snap.data():{rol:'gerente',tienda:'Mi Tienda'};
   curRole=data.rol||'gerente';curTienda=data.tienda||'Mi Tienda';
+  llenarSelectsCargo();
   document.getElementById('tb-sub').textContent=curRole==='directora'?'Directora de Operaciones':curRole==='consulta'?'Consulta — Solo lectura':'Gerente de tienda · '+curTienda;
   document.getElementById('tb-user').textContent=curRole==='directora'?'Directora de Operaciones':curRole==='consulta'?'Directora Comercial':'Gerente de tienda';
   document.getElementById('k-store').textContent=curTienda;
@@ -1180,6 +1218,7 @@ function buildNav(){
       if(t==='dashboard')loadDashboard();
       if(t==='historial-mallas'){initHistorialTiendas();cargarHistorialMallas();}
       if(t==='mes'){initVistaMes();cargarVistaMes();}
+      if(t==='personal')initPersonalDir();
       if(t==='reporte')loadTiendasSelect();
     };
     nav.appendChild(btn);
@@ -1282,8 +1321,8 @@ function loadSelectOtrosi(){
   const sel=document.getElementById('eq-otrosi-emp');if(!sel)return;
   sel.innerHTML='<option value="">Seleccionar...</option>';
   // Incluir todos los asesores MT activos
-  const mt=personalCache.filter(p=>p.tipo==='MT'&&p.cargo==='ASESOR');
-  if(mt.length===0)sel.innerHTML='<option value="">Sin asesores MT en esta tienda</option>';
+  const mt=personalCache.filter(p=>p.tipo==='MT'&&!esCargoDirectivo(p.cargo));
+  if(mt.length===0)sel.innerHTML='<option value="">Sin personal MT en esta tienda</option>';
   else mt.forEach(p=>sel.innerHTML+=`<option value="${p.id}">${p.nombre}</option>`);
 }
 
@@ -1339,6 +1378,7 @@ window.agregarPersona=async()=>{
   const cargo=document.getElementById('eq-cargo').value;
   const tipo=document.getElementById('eq-tipo').value;
   if(!ced||!nom){alert('Cédula y nombre son obligatorios');return;}
+  if(cargo==='GERENTE'&&curRole!=='directora'){alert('Solo la Directora puede crear gerentes.');return;}
   await setDoc(doc(db,'personal',ced),{cedula:ced,nombre:nom,tienda:curTienda,cargo,tipo,activo:true,creado:new Date().toISOString()});
   showOk('eq-ok',`✓ ${nom} agregado al equipo.`);
   document.getElementById('eq-ced').value='';document.getElementById('eq-nom').value='';
@@ -1348,7 +1388,9 @@ window.agregarPersona=async()=>{
 window.editarPersona=(id,nombre,cargo,tipo)=>{
   document.getElementById('editar-id').value=id;
   document.getElementById('editar-nombre').value=nombre;
-  document.getElementById('editar-cargo').value=cargo;
+  const selC=document.getElementById('editar-cargo');selC.value=cargo;
+  if(selC.value!==cargo){const o=document.createElement('option');o.value=cargo;o.textContent=cargo;selC.appendChild(o);selC.value=cargo;}   // un cargo antiguo no se pierde al guardar
+  selC.disabled=cargo==='GERENTE'&&curRole!=='directora';   // el cargo de un gerente solo lo cambia la Directora
   document.getElementById('editar-tipo').value=tipo;
   document.getElementById('modal-editar-title').textContent=`Editar — ${nombre.split(' ').slice(0,2).join(' ')}`;
   document.getElementById('editar-ok').style.display='none';
@@ -1363,6 +1405,8 @@ window.guardarEdicionPersona=async()=>{
   const cargo=document.getElementById('editar-cargo').value;
   const tipo=document.getElementById('editar-tipo').value;
   if(!nombre){alert('El nombre es obligatorio');return;}
+  const orig=personalCache.find(p=>p.id===id);
+  if(curRole!=='directora'&&((cargo==='GERENTE'&&(!orig||orig.cargo!=='GERENTE'))||(orig&&orig.cargo==='GERENTE'&&cargo!=='GERENTE'))){alert('Solo la Directora puede asignar o cambiar el cargo de Gerente.');return;}
   await updateDoc(doc(db,'personal',id),{nombre,cargo,tipo});
   showOk('editar-ok','✓ Datos actualizados correctamente.');
   setTimeout(()=>{cerrarModalEditar();loadPersonal();},1500);
@@ -1603,7 +1647,7 @@ window.generarMalla=async(mallaIdEditar=null)=>{
   const infos=[];
   ['GERENTE','SUBGERENTE','ASESOR'].forEach(c=>{
     const d=DESCANSOS[curTienda]?.[c];
-    if(d!==undefined)infos.push(`${c}: ${diasNombres[d]}`);
+    if(d!==undefined)infos.push(`${c==='ASESOR'?'ASESOR y demás cargos':c}: ${diasNombres[d]}`);
   });
   const domEl=document.getElementById('m-dominical-info');
   domEl.textContent='Días de descanso asignados (trabajarlos = recargo dominical): '+infos.join(' · ');
@@ -2446,7 +2490,7 @@ window.cargarVistaMes=async()=>{
 
     // Filas: personal activo o con celdas en el mes
     const filas=Object.values(personal).filter(p=>(p.activo!==false||celdas[p.id])&&(cargoF==='all'||p.cargo===cargoF));
-    const ordCargo={GERENTE:0,SUBGERENTE:1,ASESOR:2};
+    const ordCargo=ORDEN_CARGO;
     filas.sort((a,b)=>TODAS_TIENDAS.indexOf(a.tienda)-TODAS_TIENDAS.indexOf(b.tienda)||(ordCargo[a.cargo]??3)-(ordCargo[b.cargo]??3)||a.nombre.localeCompare(b.nombre));
     if(!filas.length){wrap.innerHTML='<div style="font-size:12px;color:var(--gris-m);padding:1rem">Sin personal para los filtros seleccionados.</div>';return;}
 
@@ -3034,7 +3078,7 @@ const hmCorto=min=>{const h=Math.floor(min/60)%24,m=min%60;return (h%12||12)+':'
 const AUS_CORTO={INCAPACIDAD:'INC',VACACIONES:'VAC',PERMISO:'PER'};
 function construirGridRegistros({anio,mes,hoyISO,personal,celdas,turnos,regsDia,pendientes,soloFaltantes}){
   const diasMes=new Date(anio,mes,0).getDate();
-  const ord={GERENTE:0,SUBGERENTE:1,ASESOR:2};
+  const ord=ORDEN_CARGO;
   const filas=[...personal].sort((a,b)=>(ord[a.cargo]??3)-(ord[b.cargo]??3)||a.nombre.localeCompare(b.nombre));
   const resumen={faltanEntrada:0,faltanSalida:0,sinRegistro:0,pendientes:0,personasConFaltantes:0};
   const esc=t=>String(t).replace(/"/g,'&quot;');
@@ -3182,6 +3226,65 @@ window.pedirRegistroManual=el=>{
   const nom=sel.options[sel.selectedIndex].textContent.split(' · ')[0];
   showOk('rm-ok',`Solicitud preparada: ${nom} · ${fecha} · ${tipo}. Revisa la hora, escribe el motivo y envíala.`,7000);
   setTimeout(()=>document.getElementById(hora?'rm-motivo':'rm-hora').focus({preventScroll:true}),500);
+};
+
+// ── PERSONAL (solo directora): crear personas con cualquier cargo en cualquier tienda ──
+const etiquetaCargo=id=>(CARGOS.find(c=>c.id===id)||{label:id}).label;
+
+window.initPersonalDir=()=>{
+  const sel=document.getElementById('gp-tienda'),fil=document.getElementById('gp-f-tienda');
+  if(!sel.options.length)sel.innerHTML=TODAS_TIENDAS.map(t=>`<option value="${escH(t)}">${escH(t)}</option>`).join('');
+  if(!fil.options.length)fil.innerHTML='<option value="all">Todas las tiendas</option>'+TODAS_TIENDAS.map(t=>`<option value="${escH(t)}">${escH(t)}</option>`).join('');
+  cargarPersonalDir();
+};
+
+window.cargarPersonalDir=async()=>{
+  const list=document.getElementById('gp-list'),res=document.getElementById('gp-resumen');
+  const fTienda=document.getElementById('gp-f-tienda').value||'all',fCargo=document.getElementById('gp-f-cargo').value||'all';
+  try{
+    const snaps=await getDocs(collection(db,'personal'));
+    let filas=[];snaps.forEach(d=>filas.push({id:d.id,...d.data()}));
+    const total=filas.length;
+    filas=filas.filter(p=>(fTienda==='all'||p.tienda===fTienda)&&(fCargo==='all'||p.cargo===fCargo));
+    filas.sort((a,b)=>TODAS_TIENDAS.indexOf(a.tienda)-TODAS_TIENDAS.indexOf(b.tienda)||(ORDEN_CARGO[a.cargo]??99)-(ORDEN_CARGO[b.cargo]??99)||String(a.nombre).localeCompare(String(b.nombre)));
+    res.textContent=`${filas.length} de ${total} persona(s)`;
+    if(!filas.length){list.innerHTML='<div style="font-size:12px;color:var(--gris-m)">Sin personal para los filtros seleccionados.</div>';return;}
+    list.innerHTML=filas.map(p=>{
+      const estado=p.activo===false?'<span class="pill p-pend">Inactivo</span>':p.bloqueado?'<span class="pill p-rej">🔒 Bloqueado</span>':'<span class="pill p-ok">Activo</span>';
+      const foto=p.fotoRef?'<span style="color:var(--verde-t)">✓ foto</span>':'<span style="color:var(--rojo)">sin foto</span>';
+      return `<div class="person-row"><div class="p-info"><div class="p-name">${escH(p.nombre)}</div>
+        <div class="p-sub">${escH(p.tienda)} · ${escH(etiquetaCargo(p.cargo))} · ${escH(p.tipo||'')} · CC ${escH(p.cedula||p.id)} · ${foto}</div></div>${estado}</div>`;
+    }).join('');
+  }catch(e){console.error(e);list.innerHTML='<div class="alert-err">No se pudo cargar la lista: '+escH(detalleError(e))+'</div>';}
+};
+
+window.crearPersonaDir=async()=>{
+  const tienda=document.getElementById('gp-tienda').value;
+  const ced=document.getElementById('gp-ced').value.trim();
+  const nom=document.getElementById('gp-nom').value.trim();
+  const cargo=document.getElementById('gp-cargo').value;
+  const tipo=document.getElementById('gp-tipo').value;
+  if(!tienda||!ced||!nom||!cargo){alert('Tienda, cédula, nombre y cargo son obligatorios');return;}
+  if(curRole!=='directora'){alert('Solo la Directora puede crear personal desde aquí.');return;}
+  const etq=etiquetaCargo(cargo);
+  try{
+    const ref=doc(db,'personal',ced);
+    const ya=await getDoc(ref);
+    let msg;
+    if(ya.exists()){
+      // La cédula ya existe (por ejemplo, un ascenso o un traslado): se actualiza sin perder foto ni registros
+      const e=ya.data();
+      if(!confirm(`La cédula ${ced} ya está registrada:\n${e.nombre} · ${etiquetaCargo(e.cargo)} · ${e.tienda} (${e.activo===false?'inactiva':'activa'})\n\n¿Actualizarla como ${etq.toUpperCase()} de ${tienda}?\n\nSe conservan su foto de referencia y sus registros.`))return;
+      await updateDoc(ref,{nombre:nom,cargo,tienda,tipo,activo:true,fechaDesactivacion:null});
+      msg=`✓ ${nom} ahora es ${etq.toLowerCase()} de ${tienda}. ${e.fotoRef?'Conserva su foto de referencia.':'Falta su foto de referencia: tómala desde el usuario de esa tienda (Mi equipo → Registrar foto).'}`;
+    }else{
+      await setDoc(ref,{cedula:ced,nombre:nom,tienda,cargo,tipo,activo:true,creado:new Date().toISOString(),creadoPor:curUser.uid});
+      msg=`✓ ${nom} creado como ${etq.toLowerCase()} de ${tienda}. Falta su foto de referencia: tómala desde el usuario de esa tienda (Mi equipo → Registrar foto).`;
+    }
+    showOk('gp-ok',msg,9000);
+    document.getElementById('gp-ced').value='';document.getElementById('gp-nom').value='';
+    await cargarPersonalDir();
+  }catch(e){console.error('[crear persona]',e);alert('No se pudo crear la persona.\n\nMotivo: '+detalleError(e));}
 };
 
 // ── REGISTRO MANUAL ──
