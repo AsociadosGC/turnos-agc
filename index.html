@@ -138,6 +138,8 @@ body{font-family:var(--font);background:var(--bg);min-height:100vh;color:#1a1a2e
 .sel-descanso{background:var(--am-c)!important;color:var(--am-t)!important}
 .sel-ausencia{background:var(--az-c)!important;color:var(--az-t)!important}
 .sel-comp{background:#efe9ff!important;color:#4c3a9e!important}
+.sel-retiro{background:#d4d4de!important;color:#2b2b3d!important;font-weight:700}
+.sel-cumple{background:#ffe8f1!important;color:#a01d5c!important;font-weight:700}
 .sel-dominical{background:#fff0f0!important;color:#8b0000!important}
 .hours-bar{display:flex;align-items:center;justify-content:space-between;padding:7px 10px;border-radius:8px;font-size:12px;font-weight:500;margin:10px 0}
 .h-ok{background:var(--verde-c);color:var(--verde-t)}.h-warn{background:var(--am-c);color:var(--am-t)}.h-err{background:var(--rojo-c);color:var(--rojo)}
@@ -543,6 +545,7 @@ body{font-family:var(--font);background:var(--bg);min-height:100vh;color:#1a1a2e
         </div>
         <div class="hours-bar h-ok" id="m-hours" style="display:none;margin-top:10px"></div>
         <div id="m-warn" style="display:none;margin-top:6px"></div>
+        <div id="m-retiro" style="display:none;margin-top:6px"></div>
         <div id="m-dominical-info" style="margin-top:6px;font-size:11px;color:var(--gris-m);display:none"></div>
         <div id="m-festivo-info" style="display:none;margin-top:8px;font-size:11px;line-height:1.5;padding:8px 12px;border-radius:8px;background:#efe9ff;color:#4c3a9e"></div>
         <div style="display:flex;gap:8px;margin-top:1rem">
@@ -710,23 +713,34 @@ body{font-family:var(--font);background:var(--bg);min-height:100vh;color:#1a1a2e
 
     <!-- DASHBOARD DIRECTORA -->
     <div class="view" id="view-dashboard">
+      <div class="card" style="padding:12px 16px;margin-bottom:12px">
+        <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap">
+          <div class="fg" style="margin-bottom:0;min-width:160px"><label>Fecha</label><input type="date" id="dash-fecha" onchange="cambiarFechaDash()"></div>
+          <button class="btn-s" style="padding:8px 12px" onclick="moverFechaDash(-1)">‹ Día anterior</button>
+          <button class="btn-s" style="padding:8px 12px" id="dash-fecha-sig" onclick="moverFechaDash(1)">Día siguiente ›</button>
+          <button class="btn-s" style="padding:8px 12px" onclick="fechaDashHoy()">Hoy</button>
+          <div id="dash-fecha-label" style="font-size:12px;color:var(--gris-m);flex:1;min-width:220px;line-height:1.4"></div>
+        </div>
+      </div>
       <div class="metrics">
-        <div class="metric"><div class="metric-n v" id="dm-open">—</div><div class="metric-l">Tiendas con registro hoy</div></div>
-        <div class="metric"><div class="metric-n r" id="dm-sin">—</div><div class="metric-l">Sin registro hoy</div></div>
+        <div class="metric"><div class="metric-n v" id="dm-open">—</div><div class="metric-l" id="dm-open-l">Tiendas con registro hoy</div></div>
+        <div class="metric"><div class="metric-n r" id="dm-sin">—</div><div class="metric-l" id="dm-sin-l">Sin registro hoy</div></div>
+        <div class="metric"><div class="metric-n v" id="dm-ing">—</div><div class="metric-l" id="dm-ing-l">Personas que ingresaron</div></div>
+        <div class="metric"><div class="metric-n a" id="dm-ret">—</div><div class="metric-l" id="dm-ret-l">Retardos</div></div>
         <div class="metric"><div class="metric-n a" id="dm-mallas">—</div><div class="metric-l">Mallas por aprobar</div></div>
         <div class="metric"><div class="metric-n a" id="dm-aus">—</div><div class="metric-l">Solicitudes pendientes</div></div>
       </div>
       <div class="two-col">
         <div>
           <div class="card">
-            <div class="card-title">Estado tiendas hoy</div>
+            <div class="card-title" id="dash-estado-titulo">Estado tiendas hoy</div>
             <div id="dash-tiendas"><div style="font-size:12px;color:var(--gris-m)">Cargando...</div></div>
           </div>
           <div class="card">
             <div class="card-title">🔒 Personas bloqueadas</div>
             <div style="font-size:11px;color:var(--gris-m);margin-bottom:10px">Bloqueadas por fallos de verificación facial — requieren desbloqueo manual</div>
             <div id="dash-bloqueados"><div style="font-size:12px;color:var(--gris-m)">Sin personas bloqueadas.</div></div>
-            <div class="card-title" style="margin-top:1rem">⚠ Alertas de seguridad hoy</div>
+            <div class="card-title" style="margin-top:1rem" id="dash-alertas-titulo">⚠ Alertas de seguridad hoy</div>
             <div style="font-size:11px;color:var(--gris-m);margin-bottom:10px">Verificaciones faciales fallidas y salidas tardías</div>
             <div id="dash-alertas"><div style="font-size:12px;color:var(--gris-m)">Sin alertas hoy.</div></div>
           </div>
@@ -743,11 +757,12 @@ body{font-family:var(--font);background:var(--bg);min-height:100vh;color:#1a1a2e
             <div id="dash-aus"><div style="font-size:12px;color:var(--gris-m)">Sin solicitudes pendientes.</div></div>
           </div>
           <div class="card">
-            <div class="card-title">Registro del día por tienda</div>
-            <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap">
+            <div class="card-title" id="dash-reg-titulo">Registro del día por tienda</div>
+            <div style="display:flex;gap:8px;margin-bottom:10px;flex-wrap:wrap;align-items:center">
               <select id="dash-tienda-sel" style="font-family:var(--font);font-size:12px;padding:5px 8px;border:1px solid var(--gris-c);border-radius:6px;flex:1" onchange="cargarRegistroDia()">
                 <option value="all">Todas las tiendas</option>
               </select>
+              <label style="display:flex;align-items:center;gap:5px;font-size:12px;font-weight:500;cursor:pointer;white-space:nowrap"><input type="checkbox" id="dash-solo-ret" onchange="cargarRegistroDia()" style="width:auto"> Solo retardos</label>
             </div>
             <div id="dash-registro-dia"><div style="font-size:12px;color:var(--gris-m)">Cargando registros...</div></div>
           </div>
@@ -876,10 +891,11 @@ body{font-family:var(--font);background:var(--bg);min-height:100vh;color:#1a1a2e
               <th class="tc" style="min-width:55px">HEND</th>
               <th class="tc" style="min-width:60px">Días aus.</th>
               <th class="tc" style="min-width:90px">Tipo aus.</th>
+              <th class="tc" style="min-width:130px">Retiro</th>
               <th class="tc" style="min-width:50px">Faltas</th>
               <th class="tc" style="min-width:60px">% Asist.</th>
             </tr></thead>
-            <tbody id="rep-body"><tr><td colspan="15" style="text-align:center;padding:1.5rem;color:var(--gris-m);font-size:12px">Selecciona el periodo y genera el reporte.</td></tr></tbody>
+            <tbody id="rep-body"><tr><td colspan="16" style="text-align:center;padding:1.5rem;color:var(--gris-m);font-size:12px">Selecciona el periodo y genera el reporte.</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -894,8 +910,15 @@ import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged } from
 import { getFirestore, collection, doc, setDoc, getDoc, getDocs, addDoc, updateDoc, query, where, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
 // ── FESTIVOS Y COMPENSATORIOS ──
-const NO_TRABAJO=['DESCANSO','INCAPACIDAD','VACACIONES','PERMISO','COMPENSATORIO'];
-const AUSENCIA_VISUAL=['INCAPACIDAD','VACACIONES','PERMISO','COMPENSATORIO'];
+const NO_TRABAJO=['DESCANSO','INCAPACIDAD','VACACIONES','PERMISO','COMPENSATORIO','RENUNCIA','TERMINACION','CUMPLEANOS'];
+const AUSENCIA_VISUAL=['INCAPACIDAD','VACACIONES','PERMISO','COMPENSATORIO','RENUNCIA','TERMINACION','CUMPLEANOS'];
+// Cumpleaños: día libre (no hay turno ni registro) que NO se descuenta: suma como un día de 7 horas en la malla y en nómina
+const HORAS_CUMPLEANOS=7;
+// Retiro del colaborador (renuncia o terminación de contrato): la persona sigue en la malla por las novedades,
+// pero desde el día siguiente a su último día ya no existe: no registra en el kiosk, no cuenta en la dotación ni como falta.
+const RETIRO={RENUNCIA:{corto:'REN',txt:'Renuncia'},TERMINACION:{corto:'FIN',txt:'Terminación de contrato'}};
+const esRetiro=v=>v==='RENUNCIA'||v==='TERMINACION';
+const cortoCelda=v=>RETIRO[v]?RETIRO[v].corto:(v==='CUMPLEANOS'?'CUM':String(v).substring(0,3));
 // Lunes festivos de Colombia (Ley Emiliani) 2026-2027 — verificar cada año
 const FESTIVOS_LUNES=['2026-01-12','2026-03-23','2026-05-18','2026-06-08','2026-06-15','2026-06-29','2026-07-20','2026-08-17','2026-10-12','2026-11-02','2026-11-16',
   '2027-01-11','2027-03-22','2027-05-10','2027-05-31','2027-06-07','2027-07-05','2027-08-16','2027-10-18','2027-11-01','2027-11-15'];
@@ -934,7 +957,7 @@ async function cargarCompensacion(tienda,lunes,mallaIdActual,turnosMap){
     if(!m){faltan.push(k);return;}
     Object.entries(m.data||{}).forEach(([emp,dias])=>{
       let h=0;
-      Object.values(dias).forEach(tid=>{if(NO_TRABAJO.includes(tid))return;const t=turnosMap[tid];if(t)h+=t.horas||0;});
+      Object.values(dias).forEach(tid=>{if(tid==='CUMPLEANOS'){h+=HORAS_CUMPLEANOS;return;}if(NO_TRABAJO.includes(tid))return;const t=turnosMap[tid];if(t)h+=t.horas||0;});
       otras[emp]=(otras[emp]||0)+h;
     });
   });
@@ -965,11 +988,12 @@ const hmDeMin=m=>pad2(Math.floor(m/60)%24)+':'+pad2(m%60);
 //  - sin malla de la semana, o sin turno asignado hoy (descanso, ausencia, fuera de la malla) → no registra
 //  - entrada: desde 5 minutos antes del turno hasta la hora de salida del turno
 //  - salida: solo si ya registró la entrada ese día (si no se pudo leer, no bloquea)
-function evaluarJornadaKiosk({ahora,tipo,empId,mallas,turnos,registrosHoy}){
+function evaluarJornadaKiosk({ahora,tipo,empId,mallas,turnos,registrosHoy,retiro}){
   const nowMin=ahora.getHours()*60+ahora.getMinutes();
   const lunes=lunesDe(isoDate(ahora)),lunesISO=isoDate(lunes);
   const rango=fmtDM(lunesISO)+' al '+fmtDM(isoDate(sumaDias(lunes,6)));
   const no=(codigo,mensaje)=>({ok:false,codigo,mensaje});
+  if(retiro&&retiro.fecha&&isoDate(ahora)>retiro.fecha)return no('retirado',`Tu ${retiro.tipo==='TERMINACION'?'terminación de contrato':'renuncia'} quedó registrada (último día ${fmtDM(retiro.fecha)}). Ya no puedes registrarte en el kiosk.`);
   const prio={aprobada:2,pendiente:1};
   const deLaSemana=mallas.filter(m=>m.semana&&prio[m.estado]&&isoDate(lunesDe(m.semana))===lunesISO)
     .sort((a,b)=>prio[b.estado]-prio[a.estado]||(b.ts||0)-(a.ts||0));
@@ -979,7 +1003,7 @@ function evaluarJornadaKiosk({ahora,tipo,empId,mallas,turnos,registrosHoy}){
   const v=malla.data[empId][(ahora.getDay()+6)%7];
   if(v===undefined||v===null||v==='')return no('sin-turno','No tienes turno asignado hoy en la malla. Avisa al gerente.');
   if(NO_TRABAJO.includes(v)){
-    const q={DESCANSO:'Hoy es tu día de descanso.',COMPENSATORIO:'Hoy es tu descanso compensatorio.',INCAPACIDAD:'Hoy tienes una incapacidad registrada.',VACACIONES:'Hoy tienes vacaciones registradas.',PERMISO:'Hoy tienes un permiso registrado.'}[v];
+    const q={DESCANSO:'Hoy es tu día de descanso.',COMPENSATORIO:'Hoy es tu descanso compensatorio.',INCAPACIDAD:'Hoy tienes una incapacidad registrada.',CUMPLEANOS:'Hoy es tu día libre por cumpleaños.',RENUNCIA:'Tu renuncia ya está registrada.',TERMINACION:'Tu contrato ya terminó.',VACACIONES:'Hoy tienes vacaciones registradas.',PERMISO:'Hoy tienes un permiso registrado.'}[v];
     return no('sin-turno',q+' No hay turno activo para registrar.');
   }
   const t=turnos[v];
@@ -1113,6 +1137,7 @@ const ROLES={
 let curUser=null,curRole=null,curTienda=null;
 let curEmpId=null,curEmpData=null,curTipo='entrada';
 let personalCache=[],turnosCache=[];
+let rosterMalla=[];   // personas que aparecen en la malla en edición: activos + quienes ya estaban en ella o se retiraron esa semana
 
 // ── HELPERS ──
 const pad2=n=>n<10?'0'+n:''+n;
@@ -1297,7 +1322,7 @@ function renderEquipoList(){
       ${fotoHtml}
       <div class="p-info">
         <div class="p-name">${p.nombre}</div>
-        <div class="p-sub">${p.cargo} · ${p.tipo}${esOtrosi?' (Otrosí TC hasta '+p.otrosiHasta+')':''}${descLabel} · CC ${p.cedula||p.id}</div>
+        <div class="p-sub">${p.cargo} · ${p.tipo}${esOtrosi?' (Otrosí TC hasta '+p.otrosiHasta+')':''}${descLabel} · CC ${p.cedula||p.id}${p.fechaRetiro&&RETIRO[p.tipoRetiro]?` · <b style="color:var(--rojo)">${RETIRO[p.tipoRetiro].txt}, último día ${fmtDM(p.fechaRetiro)}</b>`:''}</div>
       </div>
       <div style="display:flex;flex-direction:column;gap:4px;align-items:flex-end;flex-shrink:0">
         <span class="pill ${p.cargo==='GERENTE'?'p-ger':p.tipo==='TC'||esOtrosi?'p-tc':'p-mt'}">${esOtrosi?'Otrosí TC':p.tipo}</span>
@@ -1414,7 +1439,7 @@ window.guardarEdicionPersona=async()=>{
 
 window.reactivar=async(id,nombre)=>{
   if(!confirm(`¿Reactivar a ${nombre}?\n\nVolverá a aparecer en el kiosk y podrá ser incluido en mallas.`))return;
-  await updateDoc(doc(db,'personal',id),{activo:true,fechaDesactivacion:null});
+  await updateDoc(doc(db,'personal',id),{activo:true,fechaDesactivacion:null,fechaRetiro:null,tipoRetiro:null});
   await loadPersonal();
 };
 
@@ -1615,6 +1640,13 @@ window.generarMalla=async(mallaIdEditar=null)=>{
     aviso.style.display='block';
   }
 
+  // Quién aparece en la malla: el personal activo, más quienes ya estaban en esta malla (si se edita) o se retiraron esta
+  // semana, aunque ya estén desactivados (así no se pierden sus novedades)
+  const inactivos=await getDocs(query(collection(db,'personal'),where('tienda','==',curTienda),where('activo','==',false)));
+  const extras=[];
+  inactivos.forEach(d=>{const x={id:d.id,...d.data()};if(dataMallaExistente[x.id]||(x.fechaRetiro&&x.fechaRetiro>=isoDate(lunes)))extras.push({...x,_inactivo:true});});
+  rosterMalla=[...personalCache,...extras];
+
   // Compensatorio por lunes festivo (tiendas con descanso asignado en domingo)
   window._comp=null;
   const festEl=document.getElementById('m-festivo-info');
@@ -1632,6 +1664,9 @@ window.generarMalla=async(mallaIdEditar=null)=>{
     '<option value="INCAPACIDAD">INCAPACIDAD</option>',
     '<option value="VACACIONES">VACACIONES</option>',
     '<option value="PERMISO">PERMISO</option>',
+    '<option value="CUMPLEANOS">CUMPLEAÑOS (7h)</option>',
+    '<option value="RENUNCIA">RENUNCIA</option>',
+    '<option value="TERMINACION">FIN CONTRATO</option>',
   ].join('');
   // Formato: NOMBRE / 8am–5pm | alm 12pm (1h)
   const fmtTurnoOpt=t=>{
@@ -1653,13 +1688,13 @@ window.generarMalla=async(mallaIdEditar=null)=>{
   domEl.textContent='Días de descanso asignados (trabajarlos = recargo dominical): '+infos.join(' · ');
   domEl.style.display='block';
 
-  personalCache.forEach(p=>{
+  rosterMalla.forEach(p=>{
     const diaDescanso=getDiaDescanso(curTienda,p.cargo);
     const tr=document.createElement('tr');
     const nombreCorto=p.nombre.split(' ').slice(0,2).join(' ');
     const esOtrosi=p.otrosiActivo&&p.otrosiHasta&&new Date(p.otrosiHasta)>=new Date(semana);
     const tipoEfectivo=esOtrosi?'TC':p.tipo;
-    let cells=`<td title="${p.nombre} · CC ${p.cedula||p.id}">${nombreCorto}<br><span style="font-size:9px;color:var(--gris-m)">${p.cargo}·${tipoEfectivo}</span></td>`;
+    let cells=`<td title="${p.nombre} · CC ${p.cedula||p.id}">${nombreCorto}${p._inactivo?' <span style="font-size:8px;color:var(--rojo)">(inactivo)</span>':''}<br><span style="font-size:9px;color:var(--gris-m)">${p.cargo}·${tipoEfectivo}</span></td>`;
     DIAS.forEach((_,col)=>{
       cells+=`<td><select class="malla-sel" data-ced="${p.id}" data-dia="${col}" data-tipo="${tipoEfectivo}" data-descanso="${diaDescanso}" onchange="onMallaChange(this)">${optsEspeciales}${optsTurnos}</select></td>`;
     });
@@ -1674,6 +1709,7 @@ window.generarMalla=async(mallaIdEditar=null)=>{
       const valExistente=dataMallaExistente[p.id]?.[col];
       let def=esDiaDescanso?'DESCANSO':turnosCache[0]?.id||'DESCANSO';
       if(col===0&&lunesFestivo&&diaDescanso===0)def='COMPENSATORIO';
+      if(p.fechaRetiro&&RETIRO[p.tipoRetiro]&&isoDate(sumaDias(lunes,col))>p.fechaRetiro)def=p.tipoRetiro;   // después del último día: sigue marcado como retiro
       sel.value=valExistente||def;
       colorSelect(sel,diaDescanso,col);
     });
@@ -1687,6 +1723,11 @@ window.onMallaChange=sel=>{
   const diaDescanso=parseInt(sel.dataset.descanso);
   const col=parseInt(sel.dataset.dia);
   colorSelect(sel,diaDescanso,col);
+  if(esRetiro(sel.value)){   // el retiro rige desde ese día hasta el domingo
+    document.querySelectorAll(`.malla-sel[data-ced="${sel.dataset.ced}"]`).forEach((s2,c)=>{
+      if(c>col){s2.value=sel.value;colorSelect(s2,parseInt(s2.dataset.descanso),c);}
+    });
+  }
   calcTotalMalla();
 };
 
@@ -1694,7 +1735,9 @@ function colorSelect(sel,diaDescanso,col){
   const val=sel.value;
   const jsDay=colToJsDay(col);
   sel.className='malla-sel';
-  if(val==='DESCANSO')sel.classList.add('sel-descanso');
+  if(esRetiro(val))sel.classList.add('sel-retiro');
+  else if(val==='CUMPLEANOS')sel.classList.add('sel-cumple');
+  else if(val==='DESCANSO')sel.classList.add('sel-descanso');
   else if(val==='COMPENSATORIO')sel.classList.add('sel-comp');
   else if(AUSENCIA_VISUAL.includes(val))sel.classList.add('sel-ausencia');
   else if(jsDay===diaDescanso&&val!=='DESCANSO')sel.classList.add('sel-dominical');
@@ -1702,7 +1745,7 @@ function colorSelect(sel,diaDescanso,col){
 
 window.calcTotalMalla=()=>{
   let warns=[];
-  personalCache.forEach(p=>{
+  rosterMalla.forEach(p=>{
     const sels=document.querySelectorAll(`.malla-sel[data-ced="${p.id}"]`);
     let hTrab=0,dominicales=0;
     const tipoEfectivo=sels[0]?.dataset.tipo||p.tipo;
@@ -1710,6 +1753,7 @@ window.calcTotalMalla=()=>{
     sels.forEach((sel,col)=>{
       const val=sel.value;
       const jsDay=colToJsDay(col);
+      if(val==='CUMPLEANOS'){hTrab+=HORAS_CUMPLEANOS;return;}   // día libre que cuenta como 7 h
       if(NO_TRABAJO.includes(val))return;
       const t=turnosCache.find(t=>t.id===val);
       if(t){
@@ -1741,7 +1785,43 @@ window.calcTotalMalla=()=>{
   const wEl=document.getElementById('m-warn');
   if(warns.length>0){wEl.innerHTML=`<div class="alert-warn">⚠ Requieren aprobación de OT: ${warns.join(' · ')}</div>`;wEl.style.display='block';}
   else wEl.style.display='none';
+  // Aviso de retiros en esta malla
+  const rEl=document.getElementById('m-retiro');
+  if(rEl){
+    const lun=lunesDe(document.getElementById('m-semana').value||isoDate(new Date())),items=[];
+    rosterMalla.forEach(p=>{
+      const sels=[...document.querySelectorAll(`.malla-sel[data-ced="${p.id}"]`)];
+      const c0=sels.findIndex(x=>esRetiro(x.value));if(c0<0)return;
+      const ultimo=c0>0?DIAS[c0-1]+' '+fmtDM(isoDate(sumaDias(lun,c0-1))):'antes de esta semana';
+      const raro=sels.slice(c0).some(x=>!esRetiro(x.value));
+      items.push(`<div style="margin-top:3px">🚪 <b>${escH(p.nombre.split(' ').slice(0,2).join(' '))}</b> — ${RETIRO[sels[c0].value].txt}: último día ${ultimo}.${raro?' <span style="color:var(--rojo);font-weight:700">⚠ Tiene turnos después del retiro: revísalo.</span>':''}</div>`);
+    });
+    if(items.length){
+      rEl.innerHTML=`<div style="font-size:11px;line-height:1.5;padding:8px 12px;border-radius:8px;background:var(--gris-c);color:var(--azul)">${items.join('')}<div style="margin-top:6px;color:var(--gris-m)">La persona se conserva en la malla (novedades) y desde el día siguiente no puede registrarse en el kiosk. Al terminar con sus novedades, desactívala en Mi equipo.</div></div>`;
+      rEl.style.display='block';
+    }else rEl.style.display='none';
+  }
 };
+
+// El retiro queda en la ficha de la persona (último día trabajado); el kiosk lo usa para bloquearla aunque falte marcar semanas siguientes
+async function aplicarRetiros(data,semana){
+  const lun=lunesDe(semana),lunISO=isoDate(lun);
+  for(const p of rosterMalla){
+    const dias=data[p.id];if(!dias)continue;
+    const cols=Object.keys(dias).map(Number).sort((a,b)=>a-b);
+    const c0=cols.find(c=>esRetiro(dias[c]));
+    try{
+      if(c0!==undefined){
+        const ultimo=c0>0?isoDate(sumaDias(lun,c0-1)):(p.fechaRetiro&&p.fechaRetiro<lunISO?p.fechaRetiro:isoDate(sumaDias(lun,-1)));
+        if(p.fechaRetiro!==ultimo||p.tipoRetiro!==dias[c0])await updateDoc(doc(db,'personal',p.id),{fechaRetiro:ultimo,tipoRetiro:dias[c0]});
+      }else if(p.fechaRetiro){
+        const reintegro=cols.some(c=>!NO_TRABAJO.includes(dias[c])&&isoDate(sumaDias(lun,c))>p.fechaRetiro);   // vuelve a tener turnos
+        if(p.fechaRetiro>=lunISO||reintegro)await updateDoc(doc(db,'personal',p.id),{fechaRetiro:null,tipoRetiro:null});
+      }
+    }catch(e){console.warn('No se pudo guardar el retiro de',p.nombre,e);}
+  }
+  await loadPersonal();
+}
 
 window.enviarMalla=async()=>{
   const semana=document.getElementById('m-semana').value;
@@ -1756,6 +1836,7 @@ window.enviarMalla=async()=>{
     await addDoc(collection(db,'mallas'),{tienda:curTienda,semana,data,estado:'pendiente',creadoPor:curUser.uid,timestamp:serverTimestamp()});
     showOk('m-ok','✓ Malla enviada a la Directora de Operaciones para aprobación.');
   }
+  await aplicarRetiros(data,semana);
   mallaEditandoId=null;
   cargarMallasGuardadas();
 };
@@ -2096,7 +2177,7 @@ window.kNext=async()=>{
     const mallas=[];
     snapM.forEach(d=>{const m=d.data();mallas.push({id:d.id,semana:m.semana,estado:m.estado,data:m.data,ts:(m.timestamp&&m.timestamp.seconds)||0});});
     const registrosHoy=curTipo==='salida'?await registrosDelDia(curEmpData):null;
-    ev=evaluarJornadaKiosk({ahora:new Date(),tipo:curTipo,empId:curEmpId,mallas,turnos:Object.fromEntries(turnosCache.map(t=>[t.id,t])),registrosHoy});
+    ev=evaluarJornadaKiosk({ahora:new Date(),tipo:curTipo,empId:curEmpId,mallas,turnos:Object.fromEntries(turnosCache.map(t=>[t.id,t])),registrosHoy,retiro:{fecha:curEmpData.fechaRetiro,tipo:curEmpData.tipoRetiro}});
     console.info('[kiosk] validación',{tipo:curTipo,persona:curEmpId,mallasDeLaTienda:mallas.map(m=>m.semana+' · '+m.estado),resultado:ev.ok?'ok':ev.codigo});
   }catch(e){
     console.error('[kiosk] no se pudo validar el turno',e);
@@ -2416,7 +2497,7 @@ window.initVistaMes=()=>{
 
 const leyendaMes=modo=>{
   const chip=(bg,col,t,x='')=>`<span style="background:${bg};color:${col};padding:1px 6px;border-radius:4px;${x}">${t}</span>`;
-  const comunes=[chip('var(--am-c)','var(--am-t)','D descanso'),chip('#efe9ff','#4c3a9e','C compensatorio'),chip('var(--az-c)','var(--az-t)','INC / VAC / PER'),chip('#fff0f0','#8b0000','trabaja su día de descanso (dominical)')].join(' ');
+  const comunes=[chip('var(--am-c)','var(--am-t)','D descanso'),chip('#efe9ff','#4c3a9e','C compensatorio'),chip('var(--az-c)','var(--az-t)','INC / VAC / PER'),chip('#fff0f0','#8b0000','trabaja su día de descanso (dominical)'),chip('#ffe8f1','#a01d5c','CUM cumpleaños: día libre que cuenta 7 h')].join(' ');
   const cola=' · Pasa el mouse por una celda para ver el detalle · Borde punteado dorado = malla aún no aprobada · Encabezado dorado = lunes festivo';
   if(modo==='programado')return chip('#eef2ff','var(--azul)','8 = horas del turno programado en la malla (sin almuerzo)')+' '+comunes+cola;
   return [chip('#f0fff8','var(--verde-t)','8.5 = horas trabajadas (entrada a salida, menos almuerzo)'),chip('var(--rojo-c)','var(--rojo)','F turno sin registro · ? revisar'),
@@ -2552,11 +2633,13 @@ window.cargarVistaMes=async()=>{
           const v=c.v;
           if(v==='DESCANSO'){txt='D';bg='var(--am-c)';col='var(--am-t)';tip='Descanso';}
           else if(v==='COMPENSATORIO'){txt='C';bg='#efe9ff';col='#4c3a9e';tip='Descanso compensatorio';}
+          else if(v==='CUMPLEANOS'){txt='CUM';bg='#ffe8f1';col='#a01d5c';tip='Cumpleaños: día libre que cuenta como '+HORAS_CUMPLEANOS+' h';}
+          else if(esRetiro(v)){txt=RETIRO[v].corto;bg='var(--gris-c)';col='var(--azul)';tip=RETIRO[v].txt+' (la persona ya no está activa)';}
           else{txt=v.substring(0,3);bg='var(--az-c)';col='var(--az-t)';tip=v;}
         };
         if(modo==='programado'){
           // Turnos de la malla (aprobada; si no hay, pendiente o borrador con borde punteado)
-          if(sinTurno)marcarSinTurno();
+          if(sinTurno){marcarSinTurno();if(c.v==='CUMPLEANOS')total+=HORAS_CUMPLEANOS;}
           else if(tM){
             txt=String(horasProg);total+=horasProg;
             bg=esDom?'#fff0f0':'#eef2ff';col=esDom?'#8b0000':'var(--azul)';
@@ -2620,7 +2703,7 @@ function calcularDotacion(){
   // Rango horario 6am a 11pm
   for(let h=6;h<=23;h++) dotacionData[h]={total:0,ger:0,tc:0,mt:0,nombres:[]};
 
-  personalCache.forEach(p=>{
+  rosterMalla.forEach(p=>{
     const esGer=p.cargo==='GERENTE'||p.cargo==='SUBGERENTE';
     const esMT=p.tipo==='MT'&&!esGer;
     const esOtrosi=p.otrosiActivo&&p.otrosiHasta&&new Date(p.otrosiHasta)>=new Date();
@@ -2675,7 +2758,7 @@ function renderDotacion(filtro){
     for(let h=6;h<=23;h++) porDiaHora[d][h]={total:0,ger:0,tc:0,mt:0,nombres:[]};
   }
 
-  personalCache.forEach(p=>{
+  rosterMalla.forEach(p=>{
     const esGer=p.cargo==='GERENTE'||p.cargo==='SUBGERENTE';
     const esOtrosi=p.otrosiActivo&&p.otrosiHasta&&new Date(p.otrosiHasta)>=new Date();
     const tipoEfectivo=esOtrosi?'TC':p.tipo;
@@ -2811,10 +2894,10 @@ window.cargarHistorialMallas=async()=>{
         const diaDescanso=getDiaDescanso(m.tienda,p.cargo);
         const jsDay=colToJsDay(col);
         const esDom=diaDescanso!==null&&jsDay===diaDescanso&&!NO_TRABAJO.includes(val);
-        if(t&&!NO_TRABAJO.includes(val))hTot+=t.horas;
+        if(t&&!NO_TRABAJO.includes(val))hTot+=t.horas;else if(val==='CUMPLEANOS')hTot+=HORAS_CUMPLEANOS;
         const bg=val==='DESCANSO'?'var(--am-c)':AUSENCIA_VISUAL.includes(val)?'var(--az-c)':esDom?'#fff0f0':'#f0fff8';
         const color=val==='DESCANSO'?'var(--am-t)':AUSENCIA_VISUAL.includes(val)?'var(--az-t)':esDom?'#8b0000':'var(--verde-t)';
-        const label=val==='DESCANSO'?'DESC':AUSENCIA_VISUAL.includes(val)?val.substring(0,3):t?.nombre?.substring(0,8)||val.substring(0,6);
+        const label=val==='DESCANSO'?'DESC':AUSENCIA_VISUAL.includes(val)?cortoCelda(val):t?.nombre?.substring(0,8)||val.substring(0,6);
         return `<td style="text-align:center;background:${bg};color:${color};font-size:9px;font-weight:500;padding:3px 1px">${label}</td>`;
       }).join('');
       const rbH=otConBloque(hTot,maxH,getDiaDescanso(m.tienda,p.cargo),empId,compH);
@@ -3081,7 +3164,7 @@ window.rechazarExtra=async(id,btn)=>{
 
 // ── REGISTROS DEL MES (cuadrícula con atajo al registro manual) ──
 const hmCorto=min=>{const h=Math.floor(min/60)%24,m=min%60;return (h%12||12)+':'+pad2(m)+(h<12?'a':'p');};
-const AUS_CORTO={INCAPACIDAD:'INC',VACACIONES:'VAC',PERMISO:'PER'};
+const AUS_CORTO={INCAPACIDAD:'INC',VACACIONES:'VAC',PERMISO:'PER',RENUNCIA:'REN',TERMINACION:'FIN',CUMPLEANOS:'CUM'};
 function construirGridRegistros({anio,mes,hoyISO,personal,celdas,turnos,regsDia,pendientes,soloFaltantes}){
   const diasMes=new Date(anio,mes,0).getDate();
   const ord=ORDEN_CARGO;
@@ -3259,7 +3342,7 @@ window.cargarPersonalDir=async()=>{
       const estado=p.activo===false?'<span class="pill p-pend">Inactivo</span>':p.bloqueado?'<span class="pill p-rej">🔒 Bloqueado</span>':'<span class="pill p-ok">Activo</span>';
       const foto=p.fotoRef?'<span style="color:var(--verde-t)">✓ foto</span>':'<span style="color:var(--rojo)">sin foto</span>';
       return `<div class="person-row"><div class="p-info"><div class="p-name">${escH(p.nombre)}</div>
-        <div class="p-sub">${escH(p.tienda)} · ${escH(etiquetaCargo(p.cargo))} · ${escH(p.tipo||'')} · CC ${escH(p.cedula||p.id)} · ${foto}</div></div>${estado}</div>`;
+        <div class="p-sub">${escH(p.tienda)} · ${escH(etiquetaCargo(p.cargo))} · ${escH(p.tipo||'')} · CC ${escH(p.cedula||p.id)} · ${foto}${p.fechaRetiro&&RETIRO[p.tipoRetiro]?` · <b style="color:var(--rojo)">${RETIRO[p.tipoRetiro].txt}, último día ${escH(fmtDM(p.fechaRetiro))}</b>`:''}</div></div>${estado}</div>`;
     }).join('');
   }catch(e){console.error(e);list.innerHTML='<div class="alert-err">No se pudo cargar la lista: '+escH(detalleError(e))+'</div>';}
 };
@@ -3281,7 +3364,7 @@ window.crearPersonaDir=async()=>{
       // La cédula ya existe (por ejemplo, un ascenso o un traslado): se actualiza sin perder foto ni registros
       const e=ya.data();
       if(!confirm(`La cédula ${ced} ya está registrada:\n${e.nombre} · ${etiquetaCargo(e.cargo)} · ${e.tienda} (${e.activo===false?'inactiva':'activa'})\n\n¿Actualizarla como ${etq.toUpperCase()} de ${tienda}?\n\nSe conservan su foto de referencia y sus registros.`))return;
-      await updateDoc(ref,{nombre:nom,cargo,tienda,tipo,activo:true,fechaDesactivacion:null});
+      await updateDoc(ref,{nombre:nom,cargo,tienda,tipo,activo:true,fechaDesactivacion:null,fechaRetiro:null,tipoRetiro:null});
       msg=`✓ ${nom} ahora es ${etq.toLowerCase()} de ${tienda}. ${e.fotoRef?'Conserva su foto de referencia.':'Falta su foto de referencia: tómala desde el usuario de esa tienda (Mi equipo → Registrar foto).'}`;
     }else{
       await setDoc(ref,{cedula:ced,nombre:nom,tienda,cargo,tipo,activo:true,creado:new Date().toISOString(),creadoPor:curUser.uid});
@@ -3702,7 +3785,7 @@ window.desbloquearPersonaDirecta=async(cedula,nombre,btn)=>{
 };
 
 async function cargarAlertas(){
-  const hoy=new Date().toISOString().split('T')[0];
+  const hoy=fechaDash();
   const alertasDiv=document.getElementById('dash-alertas');
   if(!alertasDiv)return;
   alertasDiv.innerHTML='';
@@ -3731,8 +3814,7 @@ async function cargarAlertas(){
   });
 
   // 2. Alertas del día (fallos de verificación, GPS)
-  const qf=query(collection(db,'alertas-seguridad'),where('fecha','==',hoy));
-  const snapF=await getDocs(qf);
+  const snapF=await docsDeFecha('alertas-seguridad',hoy);
   snapF.forEach(d=>{
     const r=d.data();
     if(r.tipo==='bloqueo-facial')return; // ya aparece arriba
@@ -3750,8 +3832,7 @@ async function cargarAlertas(){
   });
 
   // Solicitudes automáticas de hora extra por salida tardía
-  const qot=query(collection(db,'otrosi-auto'),where('fecha','==',hoy),where('estado','==','pendiente-revision'));
-  const snapOT=await getDocs(qot);
+  const snapOT=await docsDeFecha('otrosi-auto',hoy,[where('estado','==','pendiente-revision')]);
   snapOT.forEach(d=>{
     total++;
     const o=d.data();
@@ -3761,7 +3842,7 @@ async function cargarAlertas(){
     alertasDiv.appendChild(div);
   });
 
-  if(total===0) alertasDiv.innerHTML='<div style="font-size:12px;color:var(--gris-m)">Sin alertas hoy. ✓</div>';
+  if(total===0) alertasDiv.innerHTML=`<div style="font-size:12px;color:var(--gris-m)">Sin alertas ${esHoyDash()?'hoy':'ese día'}. ✓</div>`;
 }
 
 window.desbloquearPersona=async(cedula,nombre,alertaId,btn)=>{
@@ -3786,56 +3867,137 @@ window.revisarOTAuto=async(id,btn)=>{
 };
 
 // ── REGISTRO DEL DÍA ──
+// ── DASHBOARD POR FECHA ──
+const fechaDash=()=>{const v=document.getElementById('dash-fecha');return (v&&v.value)||isoDate(new Date());};
+const esHoyDash=()=>fechaDash()===isoDate(new Date());
+const ddmm=iso=>iso.slice(8,10)+'/'+iso.slice(5,7);
+const etiquetaFecha=iso=>{const t=new Date(iso+'T12:00:00').toLocaleDateString('es-CO',{weekday:'long',day:'numeric',month:'long',year:'numeric'});return t.charAt(0).toUpperCase()+t.slice(1);};
+// La fecha guardada en los registros es UTC (después de las 7 pm queda con la del día siguiente): se usa la hora real del registro.
+const fechaLocalRegistro=r=>(!r.manual&&r.timestamp&&r.timestamp.toDate)?isoDate(r.timestamp.toDate()):r.fecha;
+async function docsDeFecha(coleccion,fechaISO,extra=[]){
+  const sig=isoDate(sumaDias(new Date(fechaISO+'T12:00:00'),1));
+  const snaps=await getDocs(query(collection(db,coleccion),where('fecha','in',[fechaISO,sig]),...extra));
+  const out=[];
+  snaps.forEach(d=>{const r=d.data();if(fechaLocalRegistro(r)===fechaISO)out.push({id:d.id,data:()=>r});});
+  return out;
+}
+async function registrosDeFecha(fechaISO,tienda){
+  const extra=(tienda&&tienda!=='all')?[where('tienda','==',tienda)]:[];
+  return (await docsDeFecha('registros',fechaISO,extra)).map(d=>d.data()).filter(r=>r.verificado!==false);
+}
+function actualizarTitulosDash(){
+  const f=fechaDash(),hoy=esHoyDash(),e=hoy?'hoy':'el '+ddmm(f);
+  const set=(id,t)=>{const el=document.getElementById(id);if(el)el.textContent=t;};
+  set('dash-fecha-label',hoy?'Hoy · '+etiquetaFecha(f):etiquetaFecha(f)+' · Las mallas por aprobar y las solicitudes pendientes siempre muestran el estado actual.');
+  set('dash-estado-titulo','Estado tiendas '+e);
+  set('dm-open-l','Tiendas con registro '+e);set('dm-sin-l','Sin registro '+e);
+  set('dm-ing-l','Personas que ingresaron '+e);set('dm-ret-l','Retardos '+e);
+  set('dash-alertas-titulo','⚠ Alertas de seguridad '+e);
+  set('dash-reg-titulo','Registro del día por tienda'+(hoy?'':' · '+ddmm(f)));
+  const sig=document.getElementById('dash-fecha-sig');if(sig)sig.disabled=hoy;
+}
+window.cambiarFechaDash=async()=>{
+  const inp=document.getElementById('dash-fecha');if(!inp.value)inp.value=isoDate(new Date());
+  actualizarTitulosDash();
+  await cargarEstadoTiendas();await cargarRegistroDia();await cargarAlertas();
+};
+window.moverFechaDash=delta=>{
+  const inp=document.getElementById('dash-fecha'),hoy=isoDate(new Date());
+  let nueva=isoDate(sumaDias(new Date(fechaDash()+'T12:00:00'),delta));
+  if(nueva>hoy)nueva=hoy;
+  inp.value=nueva;cambiarFechaDash();
+};
+window.fechaDashHoy=()=>{document.getElementById('dash-fecha').value=isoDate(new Date());cambiarFechaDash();};
+
+// Estado de cada tienda en la fecha elegida: apertura, ingresos y retardos
+async function cargarEstadoTiendas(){
+  const fecha=fechaDash(),hoy=esHoyDash();
+  const regs=(await registrosDeFecha(fecha,'all')).filter(r=>r.tipo==='entrada');
+  // una entrada por persona (la más temprana)
+  const porPersona={};
+  regs.forEach(r=>{
+    const k=r.tienda+'|'+(r.cedula||r.nombre),min=parse12to24Min(r.hora);
+    if(!porPersona[k]||(min!==null&&min<porPersona[k].min))porPersona[k]={tienda:r.tienda,hora:r.hora,min:min===null?9999:min,tardanza:r.tardanza||0};
+  });
+  const porTienda={};
+  Object.values(porPersona).forEach(p=>{
+    const t=porTienda[p.tienda]=porTienda[p.tienda]||{ingresos:0,retardos:0,primera:p};
+    t.ingresos++;if(p.tardanza>5)t.retardos++;if(p.min<t.primera.min)t.primera=p;
+  });
+  const abiertas=TODAS_TIENDAS.filter(t=>porTienda[t]).length;
+  const totalIng=Object.values(porPersona).length,totalRet=Object.values(porPersona).filter(p=>p.tardanza>5).length;
+  document.getElementById('dm-open').textContent=abiertas;
+  document.getElementById('dm-sin').textContent=TODAS_TIENDAS.length-abiertas;
+  document.getElementById('dm-ing').textContent=totalIng;
+  document.getElementById('dm-ret').textContent=totalRet;
+  const tDiv=document.getElementById('dash-tiendas');tDiv.innerHTML='';
+  TODAS_TIENDAS.forEach(t=>{
+    const x=porTienda[t],ok=!!x;
+    const sub=ok?`Apertura ${escH(x.primera.hora)} · ${x.ingresos} ingreso(s)${x.retardos?` · <span style="color:var(--am-t);font-weight:700">${x.retardos} retardo(s)</span>`:''}`:(hoy?'Sin registro hoy':'Sin registro ese día');
+    const row=document.createElement('div');row.className='store-row';
+    row.innerHTML=`<div class="sdot ${ok?'v':'r'}"></div><div class="s-info"><div class="s-name">${t}</div><div class="s-sub">${sub}</div></div><span class="pill ${ok?'p-ok':'p-rej'}">${ok?'Registrada':'Sin registro'}</span>`;
+    tDiv.appendChild(row);
+  });
+}
+
 async function cargarRegistroDia(){
   const tiendaSel=document.getElementById('dash-tienda-sel')?.value||'all';
-  const hoy=new Date().toISOString().split('T')[0];
+  const fecha=fechaDash(),hoy=esHoyDash();
+  const soloRet=!!document.getElementById('dash-solo-ret')?.checked;
   const regDiv=document.getElementById('dash-registro-dia');
   if(!regDiv)return;
   regDiv.innerHTML='<div style="font-size:12px;color:var(--gris-m)">Cargando...</div>';
-
-  let q;
-  if(tiendaSel==='all') q=query(collection(db,'registros'),where('fecha','==',hoy));
-  else q=query(collection(db,'registros'),where('fecha','==',hoy),where('tienda','==',tiendaSel));
-  const snaps=await getDocs(q);
+  const cuando=hoy?'hoy':'ese día';
+  let regs;
+  try{regs=await registrosDeFecha(fecha,tiendaSel);}
+  catch(e){console.error(e);regDiv.innerHTML='<div class="alert-err">No se pudieron cargar los registros: '+escH(detalleError(e))+'</div>';return;}
 
   // Agrupar por tienda y persona
   const porTienda={};
-  snaps.forEach(d=>{
-    const r=d.data();
+  regs.forEach(r=>{
     if(!porTienda[r.tienda])porTienda[r.tienda]={};
     if(!porTienda[r.tienda][r.cedula])porTienda[r.tienda][r.cedula]={nombre:r.nombre,entrada:null,almSal:null,almReg:null,salida:null,tardanza:0};
     const p=porTienda[r.tienda][r.cedula];
-    if(r.tipo==='entrada'){p.entrada=r.hora;p.tardanza=r.tardanza||0;}
+    if(r.tipo==='entrada'){
+      const m=parse12to24Min(r.hora);
+      if(!p.entrada||(m!==null&&m<parse12to24Min(p.entrada))){p.entrada=r.hora;p.tardanza=r.tardanza||0;}   // la entrada más temprana
+    }
     if(r.tipo==='alm-sal')p.almSal=r.hora;
     if(r.tipo==='alm-reg')p.almReg=r.hora;
-    if(r.tipo==='salida')p.salida=r.hora;
+    if(r.tipo==='salida'){
+      const m=parse12to24Min(r.hora);
+      if(!p.salida||(m!==null&&m>parse12to24Min(p.salida)))p.salida=r.hora;                    // la salida más tardía
+    }
   });
 
-  if(Object.keys(porTienda).length===0){
-    regDiv.innerHTML='<div style="font-size:12px;color:var(--gris-m)">Sin registros hoy para esta tienda.</div>';
-    return;
-  }
-
+  let hayAlgo=false;
   regDiv.innerHTML='';
   Object.entries(porTienda).sort().forEach(([tienda,personas])=>{
+    let lista=Object.values(personas);
+    const retardos=lista.filter(p=>p.tardanza>5).length;
+    if(soloRet)lista=lista.filter(p=>p.tardanza>5);
+    if(!lista.length)return;
+    hayAlgo=true;
     const bloque=document.createElement('div');bloque.className='reg-dia-tienda';
-    const cantPersonas=Object.keys(personas).length;
-    bloque.innerHTML=`<div class="reg-dia-title"><span>${tienda}</span><span>${cantPersonas} persona(s) registrada(s)</span></div>
+    bloque.innerHTML=`<div class="reg-dia-title"><span>${escH(tienda)}</span><span>${Object.keys(personas).length} persona(s) registrada(s)${retardos?` · ${retardos} retardo(s)`:''}</span></div>
     <div class="reg-dia-row header"><span>Persona</span><span>Entrada</span><span>Sal. alm.</span><span>Reg. alm.</span><span>Salida</span><span>Estado</span></div>`;
-    Object.values(personas).forEach(p=>{
+    lista.forEach(p=>{
       const esTarde=p.tardanza>5;
       const div=document.createElement('div');
       div.className='reg-dia-row'+(esTarde?' tardanza':'');
       const estadoHtml=!p.entrada?`<span class="badge-sin">Sin reg.</span>`:esTarde?`<span class="badge-tard">${p.tardanza}m tarde</span>`:`<span class="badge-ok-s">A tiempo</span>`;
-      div.innerHTML=`<span style="font-weight:500">${p.nombre.split(' ').slice(0,2).join(' ')}</span><span>${p.entrada||'—'}</span><span>${p.almSal||'—'}</span><span>${p.almReg||'—'}</span><span>${p.salida||'—'}</span><span>${estadoHtml}</span>`;
+      div.innerHTML=`<span style="font-weight:500">${escH(p.nombre.split(' ').slice(0,2).join(' '))}</span><span>${escH(p.entrada||'—')}</span><span>${escH(p.almSal||'—')}</span><span>${escH(p.almReg||'—')}</span><span>${escH(p.salida||'—')}</span><span>${estadoHtml}</span>`;
       bloque.appendChild(div);
     });
     regDiv.appendChild(bloque);
   });
+  if(!hayAlgo)regDiv.innerHTML=`<div style="font-size:12px;color:var(--gris-m)">${soloRet?`Sin retardos ${cuando}${tiendaSel==='all'?'':' en esta tienda'}. ✓`:`Sin registros ${cuando}${tiendaSel==='all'?'':' para esta tienda'}.`}</div>`;
 }
 
 window.cargarRegistroDia=cargarRegistroDia;
 async function loadDashboard(){
+  // La fecha vuelve a hoy cada vez que se abre el dashboard
+  const fi=document.getElementById('dash-fecha'),hoyL=isoDate(new Date());fi.max=hoyL;fi.value=hoyL;actualizarTitulosDash();
   // Cargar selector de tiendas
   const sel=document.getElementById('dash-tienda-sel');
   if(sel&&sel.options.length===1){
@@ -3881,20 +4043,8 @@ async function loadDashboard(){
   });
   if(pendTotal===0)ausDiv.innerHTML='<div style="font-size:12px;color:var(--gris-m)">Sin solicitudes pendientes.</div>';
 
-  // Estado tiendas
-  const hoy=new Date().toISOString().split('T')[0];
-  const qr=query(collection(db,'registros'),where('fecha','==',hoy),where('tipo','==','entrada'));
-  const snapR=await getDocs(qr);
-  const tiendasReg=new Set();snapR.forEach(d=>tiendasReg.add(d.data().tienda));
-  document.getElementById('dm-open').textContent=tiendasReg.size;
-  document.getElementById('dm-sin').textContent=TODAS_TIENDAS.length-tiendasReg.size;
-  const tDiv=document.getElementById('dash-tiendas');tDiv.innerHTML='';
-  TODAS_TIENDAS.forEach(t=>{
-    const ok=tiendasReg.has(t);
-    const row=document.createElement('div');row.className='store-row';
-    row.innerHTML=`<div class="sdot ${ok?'v':'r'}"></div><div class="s-info"><div class="s-name">${t}</div><div class="s-sub">${ok?'Con registro de apertura hoy':'Sin registro hoy'}</div></div><span class="pill ${ok?'p-ok':'p-rej'}">${ok?'Registrada':'Sin registro'}</span>`;
-    tDiv.appendChild(row);
-  });
+  // Estado tiendas, ingresos y retardos de la fecha elegida
+  await cargarEstadoTiendas();
 }
 
 // ── MODAL MALLA ──
@@ -3928,6 +4078,9 @@ window.abrirModal=async(id,card)=>{
   turnos['VACACIONES']={nombre:'VACACIONES',horas:0};
   turnos['PERMISO']={nombre:'PERMISO',horas:0};
   turnos['COMPENSATORIO']={nombre:'COMPENSATORIO',horas:0};
+  turnos['CUMPLEANOS']={nombre:'CUMPLEAÑOS',horas:0};
+  turnos['RENUNCIA']={nombre:'RENUNCIA',horas:0};
+  turnos['TERMINACION']={nombre:'FIN CONTRATO',horas:0};
   window._modalTurnos=turnos;
   const compM=await cargarCompensacion(tienda,lunesDe(m.semana),id,turnos);
   const avisoBloque=compM?`<div style="margin-bottom:8px;font-size:11px;line-height:1.5;padding:8px 12px;border-radius:8px;background:#efe9ff;color:#4c3a9e">${textoBloque(compM)}</div>`:'';
@@ -3950,7 +4103,7 @@ window.abrirModal=async(id,card)=>{
       const t=turnos[val];
       const jsDay=colToJsDay(col);
       const esDom=diaDescanso!==null&&jsDay===diaDescanso&&!NO_TRABAJO.includes(val);
-      if(t&&!NO_TRABAJO.includes(val)){hTot+=t.horas;if(esDom)dom++;}
+      if(t&&!NO_TRABAJO.includes(val)){hTot+=t.horas;if(esDom)dom++;}else if(val==='CUMPLEANOS')hTot+=HORAS_CUMPLEANOS;
       const bg=val==='DESCANSO'?'var(--am-c)':AUSENCIA_VISUAL.includes(val)?'var(--az-c)':esDom?'#fff0f0':'#f0fff8';
       const color=val==='DESCANSO'?'var(--am-t)':AUSENCIA_VISUAL.includes(val)?'var(--az-t)':esDom?'#8b0000':'var(--verde-t)';
       return `<td style="text-align:center;background:${bg};color:${color};font-size:10px;font-weight:500;padding:4px 2px">${t?.nombre||val}</td>`;
@@ -4082,7 +4235,7 @@ window.generarReporte=async()=>{
   window._repRango={ini:fechaIni,fin:fechaFin};
   const tiendaFiltro=document.getElementById('rep-tienda').value;
   const tbody=document.getElementById('rep-body');
-  tbody.innerHTML='<tr><td colspan="15" style="text-align:center;padding:1rem;color:var(--gris-m)">Calculando...</td></tr>';
+  tbody.innerHTML='<tr><td colspan="16" style="text-align:center;padding:1rem;color:var(--gris-m)">Calculando...</td></tr>';
 
   // Cargar datos base
   const snapP=await getDocs(collection(db,'personal'));
@@ -4165,7 +4318,7 @@ window.generarReporte=async()=>{
       const k=empId;
       if(!resultado[k])resultado[k]={
         cedula:p.cedula||empId,nombre:p.nombre,tienda:m.tienda,
-        cargo:p.cargo,tipo:p.tipo,
+        cargo:p.cargo,tipo:p.tipo,retiro:null,
         hTrab:0,HRN:0,HRD:0,HED:0,HEN:0,HEDD:0,HEND:0,
         diasAus:0,tiposAus:[],faltas:0,diasTrab:0
       };
@@ -4179,6 +4332,8 @@ window.generarReporte=async()=>{
         const jsDay=colToJsDay(parseInt(col));
         const esDiaDesc=diaDescanso!==null&&jsDay===diaDescanso;
 
+        if(turnoId==='CUMPLEANOS'){res.hTrab+=HORAS_CUMPLEANOS;res.cumples=(res.cumples||0)+1;return;}   // día libre pago: suma 7 h, no es falta
+        if(esRetiro(turnoId)){if(!res.retiro||fechaStr<res.retiro.desde)res.retiro={tipo:turnoId,desde:fechaStr};return;}   // retiro: novedad, no es falta ni ausencia
         if(['INCAPACIDAD','VACACIONES','PERMISO'].includes(turnoId)){res.diasAus++;return;}
         if(turnoId==='DESCANSO'||turnoId==='COMPENSATORIO')return;
         const t=turnos[turnoId];if(!t)return;
@@ -4244,7 +4399,7 @@ window.generarReporte=async()=>{
     const diagMsg=mallasPeriodo.length===0
       ?'No hay mallas aprobadas para este rango de fechas. Verifica que la malla de la semana esté aprobada.'
       :'Sin registros procesados. Verifica en la consola del navegador (F12) para más detalle.';
-    tbody.innerHTML=`<tr><td colspan="15" style="text-align:center;padding:1.5rem;color:var(--gris-m);font-size:12px">${diagMsg}</td></tr>`;
+    tbody.innerHTML=`<tr><td colspan="16" style="text-align:center;padding:1.5rem;color:var(--gris-m);font-size:12px">${diagMsg}</td></tr>`;
     return;
   }
   const rnd=v=>v>0?+(v.toFixed(2)):null;
@@ -4266,7 +4421,8 @@ window.generarReporte=async()=>{
       <td class="tc num-ot">${esGer?'D&C':fmt(rnd(r.HEDD))}</td>
       <td class="tc num-ot">${esGer?'D&C':fmt(rnd(r.HEND))}</td>
       <td class="tc num-aus">${r.diasAus||'—'}</td>
-      <td class="tc" style="font-size:10px;color:var(--gris-m)">${[...new Set(r.tiposAus)].join(', ')||'—'}</td>
+      <td class="tc" style="font-size:10px;color:var(--gris-m)">${[...new Set(r.tiposAus),...(r.cumples?['CUMPLEAÑOS'+(r.cumples>1?' ×'+r.cumples:'')]:[])].join(', ')||'—'}</td>
+      <td class="tc" style="font-size:10px;font-weight:700;color:var(--rojo)">${r.retiro?`${RETIRO[r.retiro.tipo].txt} · último día ${fmtDM(isoDate(sumaDias(new Date(r.retiro.desde+'T12:00:00'),-1)))}`:'—'}</td>
       <td class="tc" style="color:var(--rojo)">${r.faltas||'—'}</td>
       <td class="tc" style="color:var(--verde-t);font-weight:700">${asist}%</td>
     </tr>`;
@@ -4278,7 +4434,7 @@ window.exportarCSV=async(modo='compacto')=>{
   const nombre=`nomina_AGC_${rango.ini}_${rango.fin}`;
   if(modo==='compacto'){
     // Una fila por persona con totales del rango
-    const rows=[['Cédula','Nombre','Tienda','Tipo contrato','Hrs trabajadas','HRN','HRD','HED','HEN','HEDD','HEND','Días ausencia','Tipo ausencia','Faltas','% Asistencia']];
+    const rows=[['Cédula','Nombre','Tienda','Tipo contrato','Hrs trabajadas','HRN','HRD','HED','HEN','HEDD','HEND','Días ausencia','Tipo ausencia','Retiro','Faltas','% Asistencia']];
     document.querySelectorAll('#rep-body tr').forEach(tr=>{
       const cells=Array.from(tr.querySelectorAll('td')).map(td=>td.textContent.trim());
       if(cells.length>3)rows.push(cells);
