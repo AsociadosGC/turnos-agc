@@ -356,6 +356,7 @@ body{font-family:var(--font);background:var(--bg);min-height:100vh;color:#1a1a2e
     <label>Contraseña</label>
     <input type="password" id="l-pass" placeholder="••••••••" onkeydown="if(event.key==='Enter')doLogin()">
     <button class="btn-login" onclick="doLogin()">Ingresar</button>
+    <div id="login-version" style="text-align:center;font-size:10px;color:var(--gris-m);margin-top:12px"></div>
     <div class="login-err" id="l-err">Credenciales incorrectas. Verifica e intenta de nuevo.</div>
     <div style="font-size:10px;color:var(--gris-m);text-align:center;margin-top:1rem">Turnos AGC v3.0 — Asociados García Castro SAS</div>
   </div>
@@ -368,6 +369,7 @@ body{font-family:var(--font);background:var(--bg);min-height:100vh;color:#1a1a2e
       <div><div class="tb-name" style="display:none">Turnos AGC</div><div class="tb-sub" id="tb-sub" style="color:rgba(255,255,255,0.7);font-size:11px">Cargando...</div></div>
     </div>
     <div class="tb-right">
+      <div id="app-version" title="Versión del aplicativo (si no coincide con la que te entregué, actualiza con Ctrl+Shift+R)" style="font-size:10px;color:rgba(255,255,255,.5);margin-right:10px"></div>
       <div class="tb-user" id="tb-user"></div>
       <button class="btn-out" onclick="doLogout()">Salir</button>
     </div>
@@ -1069,6 +1071,10 @@ const db=getFirestore(fbApp);
 
 // ── REGLAS DE NEGOCIO ──
 const JORNADA_MAX={TC:42,MT:21,GERENTE:999,SUBGERENTE:999};
+
+// Versión del aplicativo: se muestra en el encabezado y en la pantalla de ingreso para confirmar que se cargó la última
+const APP_VERSION='2026-11-27 16:29';
+['app-version','login-version'].forEach(id=>{const e=document.getElementById(id);if(e)e.textContent='v '+APP_VERSION;});
 
 // ── CARGOS ──
 // GERENTE y SUBGERENTE son de dirección y confianza (sin horas extra). Los demás cargos siguen la regla de TC/MT
@@ -2910,14 +2916,15 @@ window.cargarHistorialMallas=async()=>{
 
     // Dotación — solo para directora, no para consulta
     if(!esConsulta&&cargo==='all'){
+      window._histCache[dotId]={data:m.data||{},personal,turnos};   // los botones leen de aquí
       tablaHtml+=`<div style="margin-top:1rem">
         <div style="font-size:12px;font-weight:700;color:var(--azul);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between">
           <span>Dotación por hora</span>
           <div style="display:flex;gap:4px">
-            <button class="dot-filt-btn active" onclick="filtrarDotHist('todos',this,'${dotId}',${JSON.stringify(m.data||{})})">Todos</button>
-            <button class="dot-filt-btn" onclick="filtrarDotHist('TC',this,'${dotId}',null)">TC</button>
-            <button class="dot-filt-btn" onclick="filtrarDotHist('MT',this,'${dotId}',null)">MT</button>
-            <button class="dot-filt-btn" onclick="filtrarDotHist('GER',this,'${dotId}',null)">Ger/Sub</button>
+            <button class="dot-filt-btn active" onclick="filtrarDotHist('todos',this,'${dotId}')">Todos</button>
+            <button class="dot-filt-btn" onclick="filtrarDotHist('TC',this,'${dotId}')">TC</button>
+            <button class="dot-filt-btn" onclick="filtrarDotHist('MT',this,'${dotId}')">MT</button>
+            <button class="dot-filt-btn" onclick="filtrarDotHist('GER',this,'${dotId}')">Ger/Sub</button>
           </div>
         </div>
         <div style="overflow-x:auto" id="${dotId}">${generarTablaDotModal(m.data||{},personal,turnos,'todos')}</div>
@@ -2988,23 +2995,24 @@ function generarTablaDotModal(data,personal,turnos,filtro){
 window.filtrarDotModal=(filtro,btn,mallaId)=>{
   btn.closest('div').querySelectorAll('.dot-filt-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
-  const wrap=document.getElementById(`dot-modal-wrap-${mallaId}`);
-  if(wrap&&window._modalData&&window._modalPersonal&&window._modalTurnos){
+  try{
+    const wrap=document.getElementById(`dot-modal-wrap-${mallaId}`);
+    if(!wrap||!window._modalData||!window._modalPersonal||!window._modalTurnos)throw new Error('faltan los datos de la malla; cierra y vuelve a abrir el detalle');
     wrap.innerHTML=generarTablaDotModal(window._modalData,window._modalPersonal,window._modalTurnos,filtro);
-  }
+  }catch(e){console.error('[dotación]',e);alert('No se pudo filtrar la dotación: '+e.message);}
 };
 
 // Cache de datos por malla para filtros en historial
 window._histCache={};
 
-window.filtrarDotHist=(filtro,btn,dotId,dataInit)=>{
+window.filtrarDotHist=(filtro,btn,dotId)=>{
   btn.closest('div').querySelectorAll('.dot-filt-btn').forEach(b=>b.classList.remove('active'));
   btn.classList.add('active');
-  // Si viene dataInit (primer clic = todos) guardamos el cache
-  if(dataInit) window._histCache[dotId]={data:dataInit,personal:window._modalPersonal,turnos:window._modalTurnos};
-  const cache=window._histCache[dotId];
-  const wrap=document.getElementById(dotId);
-  if(wrap&&cache) wrap.innerHTML=generarTablaDotModal(cache.data,cache.personal,cache.turnos,filtro);
+  try{
+    const cache=window._histCache[dotId],wrap=document.getElementById(dotId);
+    if(!wrap||!cache)throw new Error('faltan los datos de la malla; actualiza el historial');
+    wrap.innerHTML=generarTablaDotModal(cache.data,cache.personal,cache.turnos,filtro);
+  }catch(e){console.error('[dotación]',e);alert('No se pudo filtrar la dotación: '+e.message);}
 };
 
 window.toggleHistBody=(bodyId,chevId)=>{
@@ -4117,7 +4125,7 @@ window.abrirModal=async(id,card)=>{
   html+=`<div style="margin-top:8px;font-size:11px;color:var(--gris-m)">🟡 Descanso &nbsp; 🔵 Ausencia &nbsp; 🔴 Trabaja en día de descanso asignado (recargo dominical) &nbsp; 🟢 Turno normal</div>`;
 
   // Dotación por hora en el modal
-  html+=`<div style="margin-top:1rem"><div style="font-size:12px;font-weight:700;color:var(--azul);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between"><span>Dotación por hora</span><div style="display:flex;gap:4px"><button class="dot-filt-btn active" onclick="filtrarDotModal('todos',this,'${m.id}',personal,turnos)">Todos</button><button class="dot-filt-btn" onclick="filtrarDotModal('TC',this,'${m.id}',personal,turnos)">TC</button><button class="dot-filt-btn" onclick="filtrarDotModal('MT',this,'${m.id}',personal,turnos)">MT</button><button class="dot-filt-btn" onclick="filtrarDotModal('GER',this,'${m.id}',personal,turnos)">Ger/Sub</button></div></div><div style="overflow-x:auto" id="dot-modal-wrap-${m.id}">${generarTablaDotModal(data,personal,turnos,'todos')}</div></div>`;
+  html+=`<div style="margin-top:1rem"><div style="font-size:12px;font-weight:700;color:var(--azul);margin-bottom:8px;display:flex;align-items:center;justify-content:space-between"><span>Dotación por hora</span><div style="display:flex;gap:4px"><button class="dot-filt-btn active" onclick="filtrarDotModal('todos',this,'${m.id}')">Todos</button><button class="dot-filt-btn" onclick="filtrarDotModal('TC',this,'${m.id}')">TC</button><button class="dot-filt-btn" onclick="filtrarDotModal('MT',this,'${m.id}')">MT</button><button class="dot-filt-btn" onclick="filtrarDotModal('GER',this,'${m.id}')">Ger/Sub</button></div></div><div style="overflow-x:auto" id="dot-modal-wrap-${m.id}">${generarTablaDotModal(data,personal,turnos,'todos')}</div></div>`;
   document.getElementById('modal-malla-body').innerHTML=html;
   // Reset botones
   document.getElementById('rechazo-form').style.display='none';
